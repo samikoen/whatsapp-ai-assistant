@@ -16,9 +16,10 @@
     "qrcode": "^1.5.3",
     "openai": "^4.20.1",
     "express": "^4.18.2",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "puppeteer": "^21.0.0"
   },
   "keywords": ["whatsapp", "ai", "chatbot", "assistant"],
-  "author": "Your Name",
+  "author": "Trek Turkey",
   "license": "MIT"
 }

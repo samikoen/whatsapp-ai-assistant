@@ -7,3 +7,6 @@ waa.env
 .env
 *.log
 .DS_Store
+.claude-code-*/
+.tmp.driveupload/
+trek-bicycle-turkey.webflow/

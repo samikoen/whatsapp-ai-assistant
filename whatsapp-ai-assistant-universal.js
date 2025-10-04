@@ -104,7 +104,7 @@ class WhatsAppAIAssistant {
                 clientId: "whatsapp-ai-assistant"
             }),
             puppeteer: {
-                headless: false, // Tarayıcı görünür - QR kod görünsün
+                headless: true,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -112,8 +112,11 @@ class WhatsAppAIAssistant {
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
-                    '--disable-gpu'
-                ]
+                    '--disable-gpu',
+                    '--single-process',
+                    '--disable-extensions'
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || undefined
             },
             // Stability iyileştirmeleri
             webVersionCache: {
