@@ -1,0 +1,9 @@
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+whatsapp-ai-config.json
+whatsapp-ai-memory.json
+waa.env
+.env
+*.log
+.DS_Store

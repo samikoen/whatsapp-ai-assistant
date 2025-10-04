@@ -1,0 +1,13 @@
+{
+  "activeChats": [
+    {
+      "chatId": "PHONE_NUMBER@c.us",
+      "chatName": "Example Chat",
+      "prompt": "Your AI assistant prompt here",
+      "schedule": {
+        "type": "always"
+      }
+    }
+  ],
+  "openaiApiKey": "YOUR_OPENAI_API_KEY_HERE"
+}
