@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOLD - Satış Takip Sistemi</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Ana Menü Butonu -->
+    <a href="https://partner.trek-turkey.com/giris/index.html" class="back-to-menu">
+        ← Ana Menü
+    </a>
+    <style>
+        .back-to-menu {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #1e3a5f;
+            padding: 10px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+        .back-to-menu:hover {
+            background: #1e3a5f;
+            color: white;
+            transform: translateX(-3px);
+        }
+    </style>
+
+    <div class="container">
+        <header>
+            <h1>💰 SOLD</h1>
+            <p class="subtitle">Stok Değişimlerinden Satış Takibi</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button type="button" class="tab-btn active" data-tab="sales">📊 Satışlar</button>
+            <button type="button" class="tab-btn" data-tab="analytics">📈 Analitik</button>
+        </div>
+
+        <!-- SALES TAB -->
+        <div class="tab-content active" id="tab-sales">
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="date-controls">
+                <div class="date-group">
+                    <label>Başlangıç:</label>
+                    <input type="date" id="date1">
+                </div>
+                <div class="date-group">
+                    <label>Bitiş:</label>
+                    <input type="date" id="date2">
+                </div>
+                <button class="btn btn-primary" id="loadBtn">Yükle</button>
+                <button class="btn btn-secondary" id="snapshotBtn">📸 Yeni Snapshot Al</button>
+            </div>
+            <span class="last-update" id="lastUpdate"></span>
+        </div>
+
+        <!-- Snapshot Info -->
+        <div class="snapshot-info" id="snapshotInfo" style="display: none;">
+            <div class="period">
+                <span id="periodText"></span>
+            </div>
+            <div class="snapshot-list" id="snapshotList"></div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="card card-total">
+                <div class="card-icon">📦</div>
+                <div class="card-content">
+                    <h3>Toplam Satış</h3>
+                    <p id="totalSales">0</p>
+                </div>
+            </div>
+            <div class="card card-qty">
+                <div class="card-icon">🔢</div>
+                <div class="card-content">
+                    <h3>Satılan Adet</h3>
+                    <p id="totalQty">0</p>
+                </div>
+            </div>
+            <div class="card card-value">
+                <div class="card-icon">💶</div>
+                <div class="card-content">
+                    <h3>Toplam Değer</h3>
+                    <p id="totalValue">€0</p>
+                </div>
+            </div>
+            <div class="card card-bikes">
+                <div class="card-icon">🚲</div>
+                <div class="card-content">
+                    <h3>Bisiklet Satışı</h3>
+                    <p id="bikeCount">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warehouse Summary -->
+        <div class="warehouse-summary">
+            <div class="warehouse-card caddebostan clickable" data-warehouse="CADDEBOSTAN">
+                <h3>📍 CADDEBOSTAN <span class="badge">Ana Depo</span></h3>
+                <div class="warehouse-stats">
+                    <div class="stat">
+                        <span class="stat-label">Satış</span>
+                        <span class="stat-value sold" id="cadde-sold">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="warehouse-card alsancak clickable" data-warehouse="ALSANCAK">
+                <h3>📍 ALSANCAK</h3>
+                <div class="warehouse-stats">
+                    <div class="stat">
+                        <span class="stat-label">Satış</span>
+                        <span class="stat-value sold" id="alsancak-sold">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="warehouse-card bahcekoy clickable" data-warehouse="BAHCEKOY">
+                <h3>📍 BAHÇEKÖY</h3>
+                <div class="warehouse-stats">
+                    <div class="stat">
+                        <span class="stat-label">Satış</span>
+                        <span class="stat-value sold" id="bahcekoy-sold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Table -->
+        <section class="section">
+            <h2>
+                Satış Detayları <span id="salesCount" class="badge">0</span>
+            </h2>
+
+            <!-- Warehouse Filters -->
+            <div class="filters">
+                <span class="filter-label">Depo:</span>
+                <button class="filter-btn active" data-warehouse="all">Tümü</button>
+                <button class="filter-btn" data-warehouse="CADDEBOSTAN">Caddebostan</button>
+                <button class="filter-btn" data-warehouse="ALSANCAK">Alsancak</button>
+                <button class="filter-btn" data-warehouse="BAHCEKOY">Bahçeköy</button>
+            </div>
+
+            <!-- Category Filters -->
+            <div class="filters category-filters">
+                <span class="filter-label">Kategori:</span>
+                <button class="category-btn active" data-category="all">Tümü</button>
+                <div id="categoryButtons"></div>
+            </div>
+
+            <!-- Sort Filters -->
+            <div class="filters sort-filters">
+                <span class="filter-label">Sırala:</span>
+                <button class="sort-btn active" data-sort="default">Varsayılan</button>
+                <button class="sort-btn" data-sort="price-desc">Fiyat ↓</button>
+                <button class="sort-btn" data-sort="price-asc">Fiyat ↑</button>
+                <button class="sort-btn" data-sort="qty-desc">Adet ↓</button>
+                <button class="sort-btn" data-sort="total-desc">Toplam Değer ↓</button>
+            </div>
+
+            <div class="table-container">
+                <table id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>Ürün Kodu</th>
+                            <th>Ürün Adı</th>
+                            <th>Kategori</th>
+                            <th>Çıkan Depo</th>
+                            <th>Giren Depo</th>
+                            <th>Satış</th>
+                            <th>Stok Değişimi</th>
+                            <th style="text-align: right;">Fiyat / Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesBody">
+                        <tr>
+                            <td colspan="8" class="loading">
+                                <div class="loading-spinner"></div>
+                                Veriler yükleniyor...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        </div><!-- END SALES TAB -->
+
+        <!-- ANALYTICS TAB -->
+        <div class="tab-content" id="tab-analytics">
+
+            <!-- Analytics Period -->
+            <div class="controls">
+                <div class="date-controls">
+                    <div class="date-group">
+                        <label for="analyticsDays">Son:</label>
+                        <select id="analyticsDays" title="Analiz periyodu">
+                            <option value="7">7 gün</option>
+                            <option value="14">14 gün</option>
+                            <option value="30" selected>30 gün</option>
+                            <option value="90">90 gün</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="loadAnalyticsBtn">Analiz Et</button>
+                </div>
+                <span class="last-update" id="analyticsLastUpdate"></span>
+            </div>
+
+            <!-- Analytics Summary Cards -->
+            <div class="summary-cards">
+                <div class="card card-total">
+                    <div class="card-icon">📦</div>
+                    <div class="card-content">
+                        <h3>Toplam Ürün</h3>
+                        <p id="analyticsTotalProducts">0</p>
+                    </div>
+                </div>
+                <div class="card card-qty">
+                    <div class="card-icon">📉</div>
+                    <div class="card-content">
+                        <h3>Satılan</h3>
+                        <p id="analyticsTotalSold">0</p>
+                    </div>
+                </div>
+                <div class="card card-value">
+                    <div class="card-icon">📈</div>
+                    <div class="card-content">
+                        <h3>Giren</h3>
+                        <p id="analyticsTotalArrived">0</p>
+                    </div>
+                </div>
+                <div class="card card-bikes">
+                    <div class="card-icon">💀</div>
+                    <div class="card-content">
+                        <h3>Ölü Stok</h3>
+                        <p id="analyticsDeadStock">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Sections -->
+            <div class="analytics-grid">
+                <!-- Fast Sellers -->
+                <section class="analytics-section">
+                    <h2>🚀 Hızlı Satanlar <span id="fastSellersCount" class="badge">0</span></h2>
+                    <div class="analytics-table-container">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Satış</th>
+                                    <th>Günlük</th>
+                                    <th>Stok</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fastSellersBody">
+                                <tr><td colspan="4" class="loading">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- New Arrivals -->
+                <section class="analytics-section">
+                    <h2>📥 Yeni Girişler <span id="newArrivalsCount" class="badge">0</span></h2>
+                    <div class="analytics-table-container">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Giriş</th>
+                                    <th>Depo</th>
+                                    <th>Stok</th>
+                                </tr>
+                            </thead>
+                            <tbody id="newArrivalsBody">
+                                <tr><td colspan="4" class="loading">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Slow Movers -->
+                <section class="analytics-section">
+                    <h2>🐢 Yavaş Satanlar <span id="slowMoversCount" class="badge">0</span></h2>
+                    <div class="analytics-table-container">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Stok</th>
+                                    <th>Gün</th>
+                                    <th>Değer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="slowMoversBody">
+                                <tr><td colspan="4" class="loading">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Dead Stock -->
+                <section class="analytics-section">
+                    <h2>💀 Ölü Stok (30+ gün) <span id="deadStockCount" class="badge">0</span></h2>
+                    <div class="analytics-table-container">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Stok</th>
+                                    <th>Gün</th>
+                                    <th>Değer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deadStockBody">
+                                <tr><td colspan="4" class="loading">Yükleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Category Performance -->
+            <section class="section">
+                <h2>📊 Kategori Performansı</h2>
+                <div class="table-container">
+                    <table id="categoryTable">
+                        <thead>
+                            <tr>
+                                <th>Kategori</th>
+                                <th>Ürün</th>
+                                <th>Satış</th>
+                                <th>Giriş</th>
+                                <th>Toplam Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryBody">
+                            <tr><td colspan="5" class="loading">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div><!-- END ANALYTICS TAB -->
+
+    </div>
+
+    <script>
+        const API_URL = 'api/get-sales.php';
+        const SNAPSHOT_URL = 'api/take-snapshot.php';
+        const ANALYTICS_URL = 'api/get-analytics.php';
+
+        let allSales = [];
+        let allCategories = [];
+        let availableSnapshots = [];
+        let currentWarehouse = 'all';
+        let currentCategory = 'all';
+        let currentSort = 'default';
+        let analyticsLoaded = false;
+
+        // Tarih varsayılanları
+        function setDefaultDates() {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            document.getElementById('date2').value = formatDate(today);
+            document.getElementById('date1').value = formatDate(yesterday);
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // Verileri yükle
+        async function loadData() {
+            const loadBtn = document.getElementById('loadBtn');
+            loadBtn.disabled = true;
+            loadBtn.textContent = 'Yükleniyor...';
+
+            const date1 = document.getElementById('date1').value;
+            const date2 = document.getElementById('date2').value;
+
+            try {
+                const response = await fetch(`${API_URL}?date1=${date1}&date2=${date2}`);
+                const data = await response.json();
+
+                console.log('API Response:', data);
+
+                if (!data.success) {
+                    showNoData(data.error, data.availableSnapshots);
+                    return;
+                }
+
+                // Snapshot bilgilerini göster
+                availableSnapshots = data.availableSnapshots || [];
+                showSnapshotInfo(data.period, availableSnapshots);
+
+                // Özet kartlarını güncelle
+                document.getElementById('totalSales').textContent = data.summary.totalSales;
+                document.getElementById('totalQty').textContent = data.summary.totalQty;
+                document.getElementById('totalValue').textContent = '€' + formatNumber(data.summary.totalValueEUR);
+                document.getElementById('bikeCount').textContent = data.summary.bikeCount;
+
+                // Depo özeti
+                document.getElementById('cadde-sold').textContent = data.summary.byWarehouse.CADDEBOSTAN;
+                document.getElementById('alsancak-sold').textContent = data.summary.byWarehouse.ALSANCAK;
+                document.getElementById('bahcekoy-sold').textContent = data.summary.byWarehouse.BAHCEKOY;
+
+                document.getElementById('lastUpdate').textContent = 'Yüklendi: ' + new Date().toLocaleTimeString('tr-TR');
+
+                // Satışları sakla
+                allSales = data.sales;
+                allCategories = data.categories || [];
+
+                // Filtreleri sıfırla
+                currentWarehouse = 'all';
+                currentCategory = 'all';
+                currentSort = 'default';
+
+                // Kategori butonlarını oluştur
+                renderCategoryButtons();
+
+                // Tabloyu render et
+                applyFilters();
+
+                // Aktif butonları sıfırla
+                resetActiveButtons();
+
+            } catch (error) {
+                console.error('Hata:', error);
+                showNoData('Veri yüklenirken hata oluştu: ' + error.message, []);
+            } finally {
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Yükle';
+            }
+        }
+
+        // Snapshot info göster
+        function showSnapshotInfo(period, snapshots) {
+            const infoDiv = document.getElementById('snapshotInfo');
+            infoDiv.style.display = 'flex';
+
+            document.getElementById('periodText').innerHTML =
+                `📅 Karşılaştırma: <strong>${period.from}</strong> → <strong>${period.to}</strong> (${period.days} gün)`;
+
+            const listDiv = document.getElementById('snapshotList');
+            listDiv.innerHTML = snapshots.slice(0, 7).map(s => {
+                const isActive = s === period.from || s === period.to;
+                return `<span class="snapshot-chip ${isActive ? 'active' : ''}" onclick="selectSnapshot('${s}')">${s}</span>`;
+            }).join('');
+        }
+
+        function selectSnapshot(date) {
+            document.getElementById('date1').value = date;
+            loadData();
+        }
+
+        // Veri yok göster
+        function showNoData(message, snapshots) {
+            document.getElementById('snapshotInfo').style.display = 'none';
+            document.getElementById('salesBody').innerHTML = `
+                <tr>
+                    <td colspan="7" class="no-data">
+                        <div class="icon">📭</div>
+                        <h3>${message}</h3>
+                        <p>Mevcut snapshot'lar: ${snapshots.length > 0 ? snapshots.join(', ') : 'Henüz yok'}</p>
+                        <p style="margin-top: 10px;">Snapshot almak için "📸 Yeni Snapshot Al" butonuna tıklayın.</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Sayı formatla
+        function formatNumber(num) {
+            return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+        }
+
+        // Tabloyu render et
+        function renderTable(sales) {
+            const tbody = document.getElementById('salesBody');
+
+            if (sales.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-data">
+                            <div class="icon">✨</div>
+                            <h3>Bu kriterlere uygun satış bulunamadı</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = sales.map(item => {
+                const outClass = item.warehouseOut ? item.warehouseOut.toLowerCase().replace('ç', 'c').replace('ö', 'o') : '';
+                const inClass = item.warehouseIn ? item.warehouseIn.toLowerCase().replace('ç', 'c').replace('ö', 'o') : '';
+                const categoryClass = item.isBike ? 'bike' : 'other';
+                const priceDisplay = item.currency === 'EUR' ? `€${formatNumber(item.price)}` : `${formatNumber(item.price)} ${item.currency}`;
+                const totalDisplay = item.currency === 'EUR' ? `€${formatNumber(item.totalValue)}` : `${formatNumber(item.totalValue)} ${item.currency}`;
+
+                // Depo isimlerini kısalt
+                const shortName = (name) => {
+                    const map = {
+                        'CADDEBOSTAN': 'CADDE',
+                        'ALSANCAK': 'ALS',
+                        'BAHCEKOY': 'BAH'
+                    };
+                    return map[name] || name.substring(0, 5);
+                };
+
+                // Çıkan depo gösterimi (miktar ile)
+                let outDisplay = '-';
+                if (item.outWarehouses && item.outWarehouses.length > 0) {
+                    outDisplay = item.outWarehouses.map(w => {
+                        const wClass = w.name.toLowerCase().replace('ç', 'c').replace('ö', 'o');
+                        return `<span class="warehouse-badge out ${wClass}" title="${w.name}">${shortName(w.name)} <strong>-${w.qty}</strong></span>`;
+                    }).join(' ');
+                }
+
+                // Giren depo gösterimi (miktar ile)
+                let inDisplay = '<span class="no-transfer">-</span>';
+                if (item.inWarehouses && item.inWarehouses.length > 0) {
+                    inDisplay = item.inWarehouses.map(w => {
+                        const wClass = w.name.toLowerCase().replace('ç', 'c').replace('ö', 'o');
+                        return `<span class="warehouse-badge in ${wClass}" title="${w.name}">${shortName(w.name)} <strong>+${w.qty}</strong></span>`;
+                    }).join(' ');
+                }
+
+                return `
+                    <tr>
+                        <td><span class="product-code">${item.productCode || '-'}</span></td>
+                        <td><span class="product-name" title="${item.productName}">${item.productName}</span></td>
+                        <td><span class="category-badge ${categoryClass}">${item.category || 'Kategorisiz'}</span></td>
+                        <td>${outDisplay}</td>
+                        <td>${inDisplay}</td>
+                        <td>
+                            <span class="sold-qty">${item.soldQty}</span>
+                            <div class="sold-from">${item.warehouseOut || item.warehouse}</div>
+                        </td>
+                        <td>
+                            <div class="stock-change">
+                                <span class="stock-before">${item.stockBefore}</span>
+                                <span class="arrow">→</span>
+                                <span class="stock-after">${item.stockAfter}</span>
+                            </div>
+                        </td>
+                        <td class="price-cell">
+                            <div class="unit-price">${priceDisplay}</div>
+                            <div class="total-value">${totalDisplay}</div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Kategori butonlarını render et
+        function renderCategoryButtons() {
+            // Önce depo filtresini uygula
+            let filtered = allSales;
+            if (currentWarehouse !== 'all') {
+                filtered = filtered.filter(s => s.warehouse === currentWarehouse);
+            }
+
+            // Kategorileri hesapla
+            const categoryCounts = {};
+            filtered.forEach(s => {
+                const cat = s.category || 'Kategorisiz';
+                if (!categoryCounts[cat]) {
+                    categoryCounts[cat] = { count: 0, isBike: s.isBike };
+                }
+                categoryCounts[cat].count++;
+            });
+
+            // Sırala (bisikletler önce)
+            const sortedCategories = Object.entries(categoryCounts)
+                .map(([name, data]) => ({ name, ...data }))
+                .sort((a, b) => {
+                    if (a.isBike !== b.isBike) return b.isBike - a.isBike;
+                    return b.count - a.count;
+                });
+
+            const container = document.getElementById('categoryButtons');
+            container.innerHTML = sortedCategories.map(cat => {
+                const bikeClass = cat.isBike ? 'bike-category' : '';
+                return `<button class="category-btn ${bikeClass}" data-category="${cat.name}">${cat.name} (${cat.count})</button>`;
+            }).join('');
+
+            // Event listeners
+            container.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentCategory = btn.dataset.category;
+                    applyFilters();
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+
+            // Tümü butonunu güncelle
+            const allBtn = document.querySelector('.category-btn[data-category="all"]');
+            if (allBtn) {
+                allBtn.textContent = `Tümü (${filtered.length})`;
+            }
+        }
+
+        // Filtreleri uygula
+        function applyFilters() {
+            let filtered = allSales;
+
+            // Depo filtresi
+            if (currentWarehouse !== 'all') {
+                filtered = filtered.filter(s => s.warehouse === currentWarehouse);
+            }
+
+            // Kategori filtresi
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(s => (s.category || 'Kategorisiz') === currentCategory);
+            }
+
+            // Sıralama (sadece EUR)
+            const getEurPrice = (item) => item.currency === 'EUR' ? (item.price || 0) : 0;
+            const getEurTotal = (item) => item.currency === 'EUR' ? (item.totalValue || 0) : 0;
+
+            switch(currentSort) {
+                case 'price-desc':
+                    filtered.sort((a, b) => getEurPrice(b) - getEurPrice(a));
+                    break;
+                case 'price-asc':
+                    filtered.sort((a, b) => getEurPrice(a) - getEurPrice(b));
+                    break;
+                case 'qty-desc':
+                    filtered.sort((a, b) => b.soldQty - a.soldQty);
+                    break;
+                case 'total-desc':
+                    filtered.sort((a, b) => getEurTotal(b) - getEurTotal(a));
+                    break;
+                // 'default' - API'den gelen sıralama
+            }
+
+            renderTable(filtered);
+            document.getElementById('salesCount').textContent = filtered.length;
+        }
+
+        // Aktif butonları sıfırla
+        function resetActiveButtons() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.warehouse === 'all');
+            });
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === 'all');
+            });
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === 'default');
+            });
+        }
+
+        // Yeni snapshot al
+        async function takeSnapshot(silent = false) {
+            const btn = document.getElementById('snapshotBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Alınıyor...';
+
+            try {
+                const response = await fetch(SNAPSHOT_URL);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (!silent) {
+                        alert(`✅ Snapshot alındı!\n\nTarih: ${data.date}\nÜrün sayısı: ${data.totalProducts}\nSüre: ${data.executionTime}`);
+                    }
+                    // Tarihi bugüne ayarla ve yükle
+                    document.getElementById('date2').value = data.date;
+                    return true;
+                } else {
+                    // Zaten alınmış - bu sessiz modda sorun değil
+                    if (!silent) {
+                        alert('ℹ️ ' + data.message);
+                    }
+                    return false;
+                }
+            } catch (error) {
+                if (!silent) {
+                    alert('❌ Hata: ' + error.message);
+                }
+                return false;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📸 Yeni Snapshot Al';
+            }
+        }
+
+        // Bugünün snapshot'ı var mı kontrol et
+        async function checkAndTakeSnapshot() {
+            const today = formatDate(new Date());
+
+            // Önce mevcut snapshot'ları kontrol et
+            try {
+                const response = await fetch(`${API_URL}?date1=${today}&date2=${today}`);
+                const data = await response.json();
+
+                // Bugünün snapshot'ı yoksa otomatik al
+                if (!data.success || !data.availableSnapshots || !data.availableSnapshots.includes(today)) {
+                    console.log('Bugün için snapshot yok, otomatik alınıyor...');
+                    document.getElementById('lastUpdate').textContent = '📸 Bugünkü snapshot alınıyor...';
+                    const taken = await takeSnapshot(true);
+                    if (taken) {
+                        document.getElementById('lastUpdate').textContent = '✅ Bugünkü snapshot alındı';
+                    }
+                } else {
+                    console.log('Bugünün snapshot\'ı zaten mevcut:', today);
+                }
+            } catch (error) {
+                console.error('Snapshot kontrol hatası:', error);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            setDefaultDates();
+            // Önce bugünün snapshot'ını kontrol et/al, sonra verileri yükle
+            await checkAndTakeSnapshot();
+            loadData();
+        });
+
+        document.getElementById('loadBtn').addEventListener('click', loadData);
+        document.getElementById('snapshotBtn').addEventListener('click', () => forceSnapshot());
+
+        // Manuel snapshot (force)
+        async function forceSnapshot() {
+            const btn = document.getElementById('snapshotBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Alınıyor...';
+
+            try {
+                const response = await fetch(SNAPSHOT_URL + '?force=1');
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`✅ Snapshot alındı!\n\nTarih: ${data.date}\nÜrün sayısı: ${data.totalProducts}\nSüre: ${data.executionTime}`);
+                    document.getElementById('date2').value = data.date;
+                    loadData();
+                } else {
+                    alert('❌ ' + (data.message || data.error));
+                }
+            } catch (error) {
+                alert('❌ Hata: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📸 Yeni Snapshot Al';
+            }
+        }
+
+        // Depo filtreleri
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentWarehouse = btn.dataset.warehouse;
+                currentCategory = 'all'; // Depo değişince kategori sıfırla
+                renderCategoryButtons();
+                applyFilters();
+
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.category-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.category === 'all');
+                });
+            });
+        });
+
+        // Tümü kategori butonu
+        document.querySelector('.category-btn[data-category="all"]').addEventListener('click', () => {
+            currentCategory = 'all';
+            applyFilters();
+            document.querySelectorAll('.category-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.category === 'all');
+            });
+        });
+
+        // Sıralama butonları
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSort = btn.dataset.sort;
+                applyFilters();
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Depo kartlarına tıklama
+        document.querySelectorAll('.warehouse-card.clickable').forEach(card => {
+            card.addEventListener('click', () => {
+                const warehouse = card.dataset.warehouse;
+                currentWarehouse = warehouse;
+                currentCategory = 'all';
+
+                // Depo filtre butonlarını güncelle
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.warehouse === warehouse);
+                });
+
+                // Kategori butonlarını yenile ve sıfırla
+                renderCategoryButtons();
+                document.querySelectorAll('.category-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.category === 'all');
+                });
+
+                // Depo kartlarının seçili durumunu güncelle
+                document.querySelectorAll('.warehouse-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+
+                applyFilters();
+
+                // Tabloya scroll et
+                document.querySelector('.section').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // ============ TAB NAVIGATION ============
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+
+                // Tab butonları
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Tab içerikleri
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById('tab-' + tab).classList.add('active');
+
+                // Analytics ilk açılışta yükle
+                if (tab === 'analytics' && !analyticsLoaded) {
+                    loadAnalytics();
+                }
+            });
+        });
+
+        // ============ ANALYTICS ============
+        document.getElementById('loadAnalyticsBtn').addEventListener('click', loadAnalytics);
+
+        async function loadAnalytics() {
+            const days = document.getElementById('analyticsDays').value;
+            const btn = document.getElementById('loadAnalyticsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Yükleniyor...';
+
+            try {
+                // Paralel API çağrıları
+                const [summary, fastSellers, newArrivals, slowMovers, deadStock, categories] = await Promise.all([
+                    fetch(`${ANALYTICS_URL}?type=summary&days=${days}`).then(r => r.json()),
+                    fetch(`${ANALYTICS_URL}?type=fast-sellers&days=${days}&limit=15`).then(r => r.json()),
+                    fetch(`${ANALYTICS_URL}?type=new-arrivals&days=${days}&limit=15`).then(r => r.json()),
+                    fetch(`${ANALYTICS_URL}?type=slow-movers&days=${days}&limit=15`).then(r => r.json()),
+                    fetch(`${ANALYTICS_URL}?type=dead-stock&days=30&limit=15`).then(r => r.json()),
+                    fetch(`${ANALYTICS_URL}?type=category-performance&days=${days}`).then(r => r.json())
+                ]);
+
+                // Summary kartları
+                if (summary.success) {
+                    document.getElementById('analyticsTotalProducts').textContent = summary.data.totalProducts;
+                    document.getElementById('analyticsTotalSold').textContent = summary.data.totalSold;
+                    document.getElementById('analyticsTotalArrived').textContent = summary.data.totalArrived;
+                    document.getElementById('analyticsDeadStock').textContent = summary.data.deadStockCount;
+                }
+
+                // Hızlı satanlar
+                if (fastSellers.success) {
+                    renderAnalyticsTable('fastSellersBody', fastSellers.data, 'fast');
+                    document.getElementById('fastSellersCount').textContent = fastSellers.data.length;
+                }
+
+                // Yeni girişler
+                if (newArrivals.success) {
+                    renderAnalyticsTable('newArrivalsBody', newArrivals.data, 'arrivals');
+                    document.getElementById('newArrivalsCount').textContent = newArrivals.data.length;
+                }
+
+                // Yavaş satanlar
+                if (slowMovers.success) {
+                    renderAnalyticsTable('slowMoversBody', slowMovers.data, 'slow');
+                    document.getElementById('slowMoversCount').textContent = slowMovers.data.length;
+                }
+
+                // Ölü stok
+                if (deadStock.success) {
+                    renderAnalyticsTable('deadStockBody', deadStock.data, 'dead');
+                    document.getElementById('deadStockCount').textContent = deadStock.data.length;
+                }
+
+                // Kategori performansı
+                if (categories.success) {
+                    renderCategoryPerformance(categories.data);
+                }
+
+                document.getElementById('analyticsLastUpdate').textContent =
+                    `Son ${days} gün - ${new Date().toLocaleTimeString('tr-TR')}`;
+
+                analyticsLoaded = true;
+
+            } catch (error) {
+                console.error('Analytics hatası:', error);
+                alert('Analitik yüklenirken hata: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analiz Et';
+            }
+        }
+
+        function renderAnalyticsTable(bodyId, data, type) {
+            const tbody = document.getElementById(bodyId);
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Veri bulunamadı</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                if (type === 'fast') {
+                    return `
+                        <tr>
+                            <td>
+                                <div class="product-code">${item.code || '-'}</div>
+                                <div class="product-name-full">${item.title || '-'}</div>
+                            </td>
+                            <td><span class="sold-qty">${item.sold}</span></td>
+                            <td><span class="daily-rate">${item.dailyRate}/gün</span></td>
+                            <td>${item.stockBefore} → ${item.stockAfter}</td>
+                        </tr>
+                    `;
+                } else if (type === 'arrivals') {
+                    const warehouses = Object.entries(item.warehouses || {})
+                        .map(([wh, qty]) => `<span class="warehouse-badge in ${wh.toLowerCase()}">${shortWarehouse(wh)} +${qty}</span>`)
+                        .join(' ');
+                    return `
+                        <tr>
+                            <td>
+                                <div class="product-code">${item.code || '-'}</div>
+                                <div class="product-name-full">${item.title || '-'}</div>
+                            </td>
+                            <td><span class="arrived-qty">+${item.arrived}</span></td>
+                            <td>${warehouses || '-'}</td>
+                            <td>${item.stockBefore} → ${item.stockAfter}</td>
+                        </tr>
+                    `;
+                } else {
+                    // slow & dead
+                    const valueDisplay = item.currency === 'EUR' ? `€${formatNumber(item.stockValue || 0)}` : '-';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="product-code">${item.code || '-'}</div>
+                                <div class="product-name-full">${item.title || '-'}</div>
+                            </td>
+                            <td>${item.currentStock}</td>
+                            <td>${item.daysWithoutMovement} gün</td>
+                            <td>${valueDisplay}</td>
+                        </tr>
+                    `;
+                }
+            }).join('');
+        }
+
+        function renderCategoryPerformance(data) {
+            const tbody = document.getElementById('categoryBody');
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Veri bulunamadı</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                const categoryClass = item.isBike ? 'bike' : 'other';
+                const valueDisplay = `€${formatNumber(item.totalValue || 0)}`;
+                return `
+                    <tr>
+                        <td><span class="category-badge ${categoryClass}">${item.name}</span></td>
+                        <td>${item.productCount}</td>
+                        <td><span class="sold-qty">${item.totalSold}</span></td>
+                        <td><span class="arrived-qty">+${item.totalArrived}</span></td>
+                        <td>${valueDisplay}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        function shortWarehouse(name) {
+            const map = { 'CADDEBOSTAN': 'CADDE', 'ALSANCAK': 'ALS', 'BAHCEKOY': 'BAH' };
+            return map[name] || name.substring(0, 5);
+        }
+    </script>
+</body>
+</html>
