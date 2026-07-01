@@ -21,16 +21,27 @@ class TokenManager
         if ($this->token !== null && time() < $this->expiresAt - 30) {
             return $this->token;
         }
-        $body = http_build_query([
+        // NOT: Garanti client_credentials akisinda redirect_uri GONDERILMEZ.
+        // Gonderildiginde OAuth sunucusu "Invalid Redirect URI" (400) donuyor; redirect_uri
+        // yalnizca portalda kayitli callback olarak durur, token isteginde yer almaz.
+        // (Sadece cfg['send_redirect_uri'] acikca true ise geriye-donuk uyumluluk icin eklenir.)
+        $params = [
             'grant_type'    => 'client_credentials',
             'client_id'     => $this->cfg['client_id'],
             'client_secret' => $this->cfg['client_secret'],
-            'redirect_uri'  => $this->cfg['redirect_uri'],
-        ]);
+        ];
+        if (!empty($this->cfg['send_redirect_uri']) && !empty($this->cfg['redirect_uri'])) {
+            $params['redirect_uri'] = $this->cfg['redirect_uri'];
+        }
         $res = $this->http->request('POST', $this->cfg['token_url'],
-            ['Content-Type: application/x-www-form-urlencoded'], $body);
+            ['Content-Type: application/x-www-form-urlencoded'], http_build_query($params));
         if ($res['status'] !== 200) {
-            throw new \RuntimeException('Token alinamadi: HTTP ' . $res['status']);
+            $info = '';
+            $err = json_decode($res['body'], true);
+            if (isset($err['result']['info'])) {
+                $info = ' — ' . $err['result']['info'];
+            }
+            throw new \RuntimeException('Token alinamadi: HTTP ' . $res['status'] . $info);
         }
         $data = json_decode($res['body'], true);
         if (!isset($data['access_token']) || !is_string($data['access_token'])) {
