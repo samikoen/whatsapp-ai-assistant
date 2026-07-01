@@ -1,26 +1,42 @@
 {
+  "result": {
+    "returnCode": 200,
+    "reasonCode": 1,
+    "messageText": "Başarılı"
+  },
   "transactions": [
     {
-      "transactionId": "REF-1001",
-      "transactionDate": "2026-06-30",
-      "valueDate": "2026-06-30",
       "amount": 1500.50,
+      "IBAN": "TR330006200000000008025893",
+      "transactionInstanceId": "2022-06-30T09:10:11.123456",
+      "productId": "2d271602-f586-590d-b70d-b8f84a59adf5",
+      "accountNum": 8025893,
+      "clasificationCode": "EFT",
+      "currencyCode": "TRY",
       "debitCreditIndicator": "C",
-      "currency": "TRY",
-      "description": "Gelen havale",
-      "counterpartyName": "ACME LTD",
-      "balanceAfter": 25000.00
+      "valueDate": "2022-06-30",
+      "explanation": "Gelen EFT",
+      "balanceAfterTransaction": 25000.00,
+      "enrichmentInformation": [
+        { "enrichmentCode": "HES", "enrichmentValue": { "accType": "G", "moduleName": "HES" } },
+        { "enrichmentCode": "MUS", "enrichmentValue": { "corrNameSurnameText": null, "nameSurnameText": "ACME LTD" } }
+      ]
     },
     {
-      "transactionId": "REF-1002",
-      "transactionDate": "2026-06-30",
-      "valueDate": "2026-06-30",
       "amount": 300.00,
+      "IBAN": "TR330006200000000008025893",
+      "transactionInstanceId": "2022-06-30T05:24:41.850556",
+      "productId": "aa112233-4455-6677-8899-aabbccddeeff",
+      "accountNum": 8025893,
+      "clasificationCode": "NMSC",
+      "currencyCode": "TRY",
       "debitCreditIndicator": "D",
-      "currency": "TRY",
-      "description": "Fatura odemesi",
-      "counterpartyName": "TEDARIKCI AS",
-      "balanceAfter": 24700.00
+      "valueDate": "2022-06-30",
+      "explanation": "Fatura odemesi",
+      "balanceAfterTransaction": 24700.00,
+      "enrichmentInformation": [
+        { "enrichmentCode": "MUS", "enrichmentValue": { "nameSurnameText": "TEDARIKCI AS" } }
+      ]
     }
   ]
 }

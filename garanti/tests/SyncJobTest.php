@@ -27,11 +27,15 @@ class SyncJobTest extends TestCase
             ['base_url' => 'https://x', 'consent_id' => 'C1'], $fieldMap);
 
         $job = new SyncJob($client, new AccountRepository($pdo), new TransactionRepository($pdo), $pdo);
-        $added = $job->run(['TR0001'], 'TRY', 7, '2026-06-30');
+        // IBAN artik istekten degil, yanittaki her hareketten geliyor (consent bazli).
+        $added = $job->run('TRY', 7, '2026-06-30');
 
         $this->assertSame(2, $added);
         $log = $pdo->query("SELECT durum, cekilen_kayit FROM sync_log")->fetch(\PDO::FETCH_ASSOC);
         $this->assertSame('ok', $log['durum']);
         $this->assertSame(2, (int)$log['cekilen_kayit']);
+        // Iki hareket ayni IBAN'da → tek hesap otomatik olusmali
+        $accCount = $pdo->query("SELECT COUNT(*) FROM accounts")->fetchColumn();
+        $this->assertSame(1, (int)$accCount);
     }
 }

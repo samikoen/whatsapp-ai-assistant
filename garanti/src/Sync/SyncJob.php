@@ -21,18 +21,33 @@ class SyncJob
         $this->pdo = $pdo;
     }
 
-    /** @param string[] $ibans @return int toplam eklenen kayit */
-    public function run(array $ibans, string $para, int $lookbackDays, string $today): int
+    /**
+     * Consent kapsamindaki tum hareketleri tek cagriyla ceker, IBAN'a gore gruplayip
+     * her hesabi (yoksa) olusturarak idempotent kaydeder. Hesaplar consent'ten otomatik dogar.
+     *
+     * @param string $para para birimi fallback'i (hareket kendi para_birimi'ni tasimazsa)
+     * @return int toplam eklenen kayit
+     */
+    public function run(string $para, int $lookbackDays, string $today): int
     {
         $from = date('Y-m-d', strtotime($today . " -{$lookbackDays} days"));
         $start = date('Y-m-d H:i:s');
         $total = 0;
         try {
-            foreach ($ibans as $iban) {
-                $rows = $this->client->getTransactions($iban, $from, $today);
-                $accPara = (!empty($rows) && !empty($rows[0]['para_birimi'])) ? $rows[0]['para_birimi'] : $para;
+            $rows = $this->client->getTransactions($from, $today);
+
+            // Hesaba (IBAN) gore grupla
+            $byIban = [];
+            foreach ($rows as $r) {
+                $byIban[$r['iban']][] = $r;
+            }
+            foreach ($byIban as $iban => $group) {
+                if ($iban === '') {
+                    continue;
+                }
+                $accPara = !empty($group[0]['para_birimi']) ? $group[0]['para_birimi'] : $para;
                 $accId = $this->accounts->ensure($iban, $accPara);
-                $total += $this->tx->save($accId, $rows);
+                $total += $this->tx->save($accId, $group);
             }
             $this->log($start, 'ok', $total, null);
         } catch (\Throwable $e) {

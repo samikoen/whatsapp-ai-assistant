@@ -27,17 +27,23 @@ class GarantiClientTest extends TestCase
             ['base_url' => 'https://apis.garantibbva.com.tr', 'consent_id' => 'CONSENT1'],
             $fieldMap);
 
-        $rows = $client->getTransactions('TR000000000000000000000001', '2026-06-01', '2026-06-30');
+        $rows = $client->getTransactions('2022-06-01', '2022-06-30');
 
         $this->assertCount(2, $rows);
-        $this->assertSame('REF-1001', $rows[0]['banka_ref']);
+        // Ilk hareket: gelen EFT (alacak), karsi taraf ic ice enrichmentInformation'dan cekiliyor
+        $this->assertSame('2022-06-30T09:10:11.123456', $rows[0]['banka_ref']);
         $this->assertSame('C', $rows[0]['borc_alacak']);
         $this->assertSame(1500.50, $rows[0]['tutar']);
         $this->assertSame('ACME LTD', $rows[0]['karsi_taraf']);
+        $this->assertSame('TRY', $rows[0]['para_birimi']);
+        $this->assertSame('TR330006200000000008025893', $rows[0]['iban']);
         $this->assertNotEmpty($rows[0]['ham_json']);
+        // Ikinci hareket: fatura odemesi (borc)
+        $this->assertSame('D', $rows[1]['borc_alacak']);
+        $this->assertSame('TEDARIKCI AS', $rows[1]['karsi_taraf']);
     }
 
-    public function test_sends_bearer_and_consent_headers(): void
+    public function test_posts_to_gettransactions_with_consent_in_body(): void
     {
         $http = new HttpFake();
         $tm = $this->tm($http);
@@ -46,11 +52,15 @@ class GarantiClientTest extends TestCase
         $client = new GarantiClient($http, $tm,
             ['base_url' => 'https://apis.garantibbva.com.tr', 'consent_id' => 'CONSENT1'], $fieldMap);
 
-        $client->getTransactions('TR0001', '2026-06-01', '2026-06-30');
+        $client->getTransactions('2022-06-01', '2022-06-30');
 
-        $apiCall = $http->calls[1]; // 0 = token, 1 = transactions
-        $flat = implode("\n", $apiCall['headers']);
-        $this->assertStringContainsString('Authorization: Bearer AAA', $flat);
-        $this->assertStringContainsString('CONSENT1', $flat);
+        $apiCall = $http->calls[1]; // 0 = token, 1 = gettransactions
+        $this->assertSame('POST', $apiCall['method']);
+        $this->assertStringContainsString('gettransactions', $apiCall['url']);
+        $flatHeaders = implode("\n", $apiCall['headers']);
+        $this->assertStringContainsString('Authorization: Bearer AAA', $flatHeaders);
+        // consentId govdede gonderilir, header'da degil
+        $this->assertStringContainsString('CONSENT1', (string)$apiCall['body']);
+        $this->assertStringContainsString('pageIndex', (string)$apiCall['body']);
     }
 }

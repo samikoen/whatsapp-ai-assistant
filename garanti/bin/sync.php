@@ -18,14 +18,10 @@ $fieldMap = require __DIR__ . '/../config/field_map.php';
 $client = new GarantiClient($http, $tm, $cfg['api'], $fieldMap);
 $pdo = Database::connect($cfg['db']);
 
-// Takip edilecek IBAN'lar: consent verilen hesaplar. Simdilik config'ten/DB'den.
+// Hesaplar consent kapsamindan otomatik dogar; onceden IBAN listesi gerekmez.
 $accounts = new AccountRepository($pdo);
-$ibans = array_column($accounts->all(), 'iban');
-if (empty($ibans)) {
-    fwrite(STDERR, "Takip edilecek hesap yok. accounts tablosuna IBAN ekleyin.\n");
-    exit(1);
-}
+$para = (string)($cfg['api']['default_currency'] ?? 'TRY');
 
 $job = new SyncJob($client, $accounts, new TransactionRepository($pdo), $pdo);
-$added = $job->run($ibans, 'TRY', (int)$cfg['sync']['lookback_days'], date('Y-m-d'));
+$added = $job->run($para, (int)$cfg['sync']['lookback_days'], date('Y-m-d'));
 echo date('c') . " — {$added} yeni hareket.\n";

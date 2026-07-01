@@ -8,8 +8,9 @@ return [
         'redirect_uri'  => 'https://partner.trek-turkey.com/garanti/callback.php',
     ],
     'api' => [
-        'base_url'    => 'https://apis.garantibbva.com.tr',
-        'consent_id'  => 'BURAYA_CONSENT_ID',
+        'base_url'         => 'https://apis.garantibbva.com.tr',
+        'consent_id'       => 'BURAYA_CONSENT_ID',
+        'default_currency' => 'TRY', // hareket kendi para_birimi'ni tasimazsa fallback
     ],
     'db' => [
         'dsn'  => 'mysql:host=localhost;dbname=garanti;charset=utf8mb4',
