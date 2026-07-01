@@ -33,7 +33,7 @@ class TokenManager
             throw new \RuntimeException('Token alinamadi: HTTP ' . $res['status']);
         }
         $data = json_decode($res['body'], true);
-        if (!isset($data['access_token'])) {
+        if (!isset($data['access_token']) || !is_string($data['access_token'])) {
             throw new \RuntimeException('Token yaniti gecersiz');
         }
         $this->token = $data['access_token'];

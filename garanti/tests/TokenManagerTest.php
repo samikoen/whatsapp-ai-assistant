@@ -34,4 +34,15 @@ class TokenManagerTest extends TestCase
         $tm->getToken();
         $this->assertCount(1, $http->calls); // ikinci cagri cache'ten
     }
+
+    public function test_throws_runtime_exception_when_access_token_is_non_string(): void
+    {
+        $http = new HttpFake();
+        $http->push(200, json_encode(['access_token' => 12345, 'expires_in' => 3600]));
+        $tm = new TokenManager($http, $this->cfg);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Token yaniti gecersiz');
+        $tm->getToken();
+    }
 }
