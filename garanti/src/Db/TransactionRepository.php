@@ -14,9 +14,9 @@ class TransactionRepository
              para_birimi, aciklama, karsi_taraf, bakiye_sonrasi, ham_json)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)";
         $stmt = $this->pdo->prepare($sql);
+        $exists = $this->pdo->prepare("SELECT 1 FROM transactions WHERE banka_ref = ?");
         $added = 0;
         foreach ($rows as $r) {
-            $exists = $this->pdo->prepare("SELECT 1 FROM transactions WHERE banka_ref = ?");
             $exists->execute([$r['banka_ref']]);
             if ($exists->fetchColumn()) {
                 continue;
