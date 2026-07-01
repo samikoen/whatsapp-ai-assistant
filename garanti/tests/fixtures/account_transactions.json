@@ -1,0 +1,26 @@
+{
+  "transactions": [
+    {
+      "transactionId": "REF-1001",
+      "transactionDate": "2026-06-30",
+      "valueDate": "2026-06-30",
+      "amount": 1500.50,
+      "debitCreditIndicator": "C",
+      "currency": "TRY",
+      "description": "Gelen havale",
+      "counterpartyName": "ACME LTD",
+      "balanceAfter": 25000.00
+    },
+    {
+      "transactionId": "REF-1002",
+      "transactionDate": "2026-06-30",
+      "valueDate": "2026-06-30",
+      "amount": 300.00,
+      "debitCreditIndicator": "D",
+      "currency": "TRY",
+      "description": "Fatura odemesi",
+      "counterpartyName": "TEDARIKCI AS",
+      "balanceAfter": 24700.00
+    }
+  ]
+}
