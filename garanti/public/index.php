@@ -47,7 +47,7 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
 <form class="filters" method="get">
   <select name="acc"><option value="">Tum hesaplar</option>
     <?php foreach ($accounts as $a): ?>
-      <option value="<?= $a['id'] ?>" <?= $acc == $a['id'] ? 'selected' : '' ?>>
+      <option value="<?= htmlspecialchars((string)$a['id']) ?>" <?= $acc == $a['id'] ? 'selected' : '' ?>>
         <?= htmlspecialchars($a['iban']) ?></option>
     <?php endforeach; ?>
   </select>

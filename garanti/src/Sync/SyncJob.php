@@ -29,8 +29,9 @@ class SyncJob
         $total = 0;
         try {
             foreach ($ibans as $iban) {
-                $accId = $this->accounts->ensure($iban, $para);
                 $rows = $this->client->getTransactions($iban, $from, $today);
+                $accPara = (!empty($rows) && !empty($rows[0]['para_birimi'])) ? $rows[0]['para_birimi'] : $para;
+                $accId = $this->accounts->ensure($iban, $accPara);
                 $total += $this->tx->save($accId, $rows);
             }
             $this->log($start, 'ok', $total, null);

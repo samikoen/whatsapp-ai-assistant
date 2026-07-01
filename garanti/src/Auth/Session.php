@@ -14,6 +14,7 @@ class Session
     {
         self::start();
         if ($user === ($cfg['username'] ?? '') && password_verify($pass, $cfg['password_hash'] ?? '')) {
+            session_regenerate_id(true);
             $_SESSION['garanti_auth'] = true;
             return true;
         }
@@ -30,6 +31,7 @@ class Session
     {
         self::start();
         unset($_SESSION['garanti_auth']);
+        session_destroy();
     }
 
     public static function requireLogin(): void
