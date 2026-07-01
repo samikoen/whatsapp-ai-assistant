@@ -2,6 +2,19 @@
 require __DIR__ . '/_guard.php';
 use Garanti\Db\Database;
 
+/**
+ * CSV formul injection (CWE-1236) korumasi: = + - @ (ve tab/CR) ile baslayan
+ * degerlerin basina tek tirnak ekleyerek Excel'in formul olarak calistirmasini onler.
+ */
+function csvSafe($v): string
+{
+    $s = (string)$v;
+    if ($s !== '' && strpbrk($s[0], "=+-@\t\r") !== false) {
+        return "'" . $s;
+    }
+    return $s;
+}
+
 $pdo = Database::connect(config('db'));
 $acc  = $_GET['acc']  ?? '';
 $from = $_GET['from'] ?? date('Y-m-01');
@@ -26,7 +39,7 @@ fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM (Excel Turkce icin)
 fputcsv($out, ['Tarih','IBAN','Aciklama','Karsi Taraf','Tutar','Borc/Alacak','Para Birimi','Bakiye'], ';');
 while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
     fputcsv($out, [
-        $r['tarih'], $r['iban'], $r['aciklama'], $r['karsi_taraf'],
+        $r['tarih'], csvSafe($r['iban']), csvSafe($r['aciklama']), csvSafe($r['karsi_taraf']),
         number_format((float)$r['tutar'], 2, ',', '.'),
         $r['borc_alacak'] === 'D' ? 'Borc' : 'Alacak',
         $r['para_birimi'],
