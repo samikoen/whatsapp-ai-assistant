@@ -94,12 +94,15 @@ class GarantiClient
         $out = [];
         $pageIndex = 1;
         do {
+            // NOT: dokuman sayfasi 'endDate', Swagger semasi ise 'endtDate' (yazim hatali) diyor.
+            // Hangisinin gecerli oldugu belirsiz -> ikisi birden gonderilir; fazla alan yok sayilir.
             $data = $this->postJson(
                 '/balancesandmovements/accountinformation/transaction/v1/gettransactions',
                 [
                     'consentId' => $this->api['consent_id'] ?? '',
                     'startDate' => $from . 'T00:00:00.000',
                     'endDate'   => $to . 'T23:59:59.999',
+                    'endtDate'  => $to . 'T23:59:59.999',
                     'pageIndex' => $pageIndex,
                     'pageSize'  => $pageSize,
                 ]
