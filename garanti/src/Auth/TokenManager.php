@@ -18,7 +18,10 @@ class TokenManager
 
     public function getToken(): string
     {
-        if ($this->token !== null && time() < $this->expiresAt - 30) {
+        // Garanti EHO dokumani: "The access token can be used only one time."
+        // cfg['single_use'] = true iken cache atlanir, her istek icin taze token alinir.
+        $singleUse = !empty($this->cfg['single_use']);
+        if (!$singleUse && $this->token !== null && time() < $this->expiresAt - 30) {
             return $this->token;
         }
         // NOT: Garanti client_credentials akisinda redirect_uri GONDERILMEZ.
@@ -50,5 +53,12 @@ class TokenManager
         $this->token = $data['access_token'];
         $this->expiresAt = time() + (int)($data['expires_in'] ?? 3600);
         return $this->token;
+    }
+
+    /** Cache'lenmis token'i gecersiz kilar; sonraki getToken() taze token alir. */
+    public function invalidate(): void
+    {
+        $this->token = null;
+        $this->expiresAt = 0;
     }
 }

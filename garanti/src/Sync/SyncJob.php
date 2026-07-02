@@ -3,6 +3,7 @@ namespace Garanti\Sync;
 
 use Garanti\Api\GarantiClient;
 use Garanti\Db\AccountRepository;
+use Garanti\Db\BalanceRepository;
 use Garanti\Db\TransactionRepository;
 
 class SyncJob
@@ -11,14 +12,17 @@ class SyncJob
     private AccountRepository $accounts;
     private TransactionRepository $tx;
     private \PDO $pdo;
+    private ?BalanceRepository $balances;
 
     public function __construct(GarantiClient $client, AccountRepository $accounts,
-                                TransactionRepository $tx, \PDO $pdo)
+                                TransactionRepository $tx, \PDO $pdo,
+                                ?BalanceRepository $balances = null)
     {
         $this->client = $client;
         $this->accounts = $accounts;
         $this->tx = $tx;
         $this->pdo = $pdo;
+        $this->balances = $balances;
     }
 
     /**
@@ -49,7 +53,24 @@ class SyncJob
                 $accId = $this->accounts->ensure($iban, $accPara);
                 $total += $this->tx->save($accId, $group);
             }
-            $this->log($start, 'ok', $total, null);
+
+            // Bakiyeler (Account Information) — hata verirse hareket sync'ini bozmasin
+            $note = null;
+            if ($this->balances !== null) {
+                try {
+                    foreach ($this->client->getAccountInformation() as $acc) {
+                        if ($acc['iban'] === '') {
+                            continue;
+                        }
+                        $accPara = $acc['para_birimi'] !== '' ? $acc['para_birimi'] : $para;
+                        $accId = $this->accounts->ensure($acc['iban'], $accPara);
+                        $this->balances->upsert($accId, $today, $acc['bakiye'], $accPara);
+                    }
+                } catch (\Throwable $e) {
+                    $note = 'bakiye hatasi: ' . substr($e->getMessage(), 0, 200);
+                }
+            }
+            $this->log($start, 'ok', $total, $note);
         } catch (\Throwable $e) {
             $this->log($start, 'error', $total, substr($e->getMessage(), 0, 500));
             throw $e;

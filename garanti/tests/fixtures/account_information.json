@@ -1,0 +1,30 @@
+{
+  "result": {
+    "returnCode": 200,
+    "reasonCode": 1,
+    "messageText": "Başarılı"
+  },
+  "accounts": [
+    {
+      "balances": [
+        { "type": "Balance", "Amount": "24700.00" },
+        { "type": "BlockedAmount", "Amount": "0.00" },
+        { "type": "AvailableBalance", "Amount": "24700.00" },
+        { "type": "CreditLimit", "Amount": "0.00" },
+        { "type": "AvailableBalanceWithCredit", "Amount": "24700.00" }
+      ],
+      "customerNum": 45245447,
+      "productName": "",
+      "accountType": "A",
+      "accountMainType": "M",
+      "accountSubType": "S",
+      "unitNum": 135,
+      "accountNum": 6294536,
+      "IBAN": "TR450006200013500006294536",
+      "currencyCode": "TL ",
+      "accountInstanceId": "2020-09-25T14:26:53.377406",
+      "lastActivityDate": "2026-06-30",
+      "status": "A"
+    }
+  ]
+}

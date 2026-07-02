@@ -8,6 +8,7 @@ use Garanti\Auth\TokenManager;
 use Garanti\Api\GarantiClient;
 use Garanti\Db\Database;
 use Garanti\Db\AccountRepository;
+use Garanti\Db\BalanceRepository;
 use Garanti\Db\TransactionRepository;
 use Garanti\Sync\SyncJob;
 
@@ -20,8 +21,9 @@ $pdo = Database::connect($cfg['db']);
 
 // Hesaplar consent kapsamindan otomatik dogar; onceden IBAN listesi gerekmez.
 $accounts = new AccountRepository($pdo);
-$para = (string)($cfg['api']['default_currency'] ?? 'TRY');
+$para = (string)($cfg['api']['default_currency'] ?? 'TL');
 
-$job = new SyncJob($client, $accounts, new TransactionRepository($pdo), $pdo);
+$job = new SyncJob($client, $accounts, new TransactionRepository($pdo), $pdo,
+    new BalanceRepository($pdo));
 $added = $job->run($para, (int)$cfg['sync']['lookback_days'], date('Y-m-d'));
 echo date('c') . " — {$added} yeni hareket.\n";
