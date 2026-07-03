@@ -34,8 +34,16 @@ $balances = [];
 try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Throwable $e) { /* window fn yoksa bos */ }
 ?><!doctype html><html lang="tr"><head><meta charset="utf-8">
 <title>Garanti Hesap Takip</title><link rel="stylesheet" href="assets/app.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script></head><body>
-<header><h1>Hesap Takip</h1><a href="logout.php">Cikis</a></header>
+</head><body>
+<header><h1>Hesap Takip</h1>
+  <nav><a class="btn" href="refresh.php">&#8635; Yenile</a> <a href="logout.php">Cikis</a></nav>
+</header>
+
+<?php if (isset($_GET['synced'])): ?>
+  <p class="notice ok">Guncellendi — <?= (int)$_GET['synced'] ?> yeni hareket alindi.</p>
+<?php elseif (isset($_GET['syncerr'])): ?>
+  <p class="notice err">Guncelleme hatasi: <?= htmlspecialchars($_GET['syncerr']) ?></p>
+<?php endif; ?>
 
 <section class="summary">
   <?php foreach ($balances as $b): ?>
@@ -58,8 +66,6 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   <a class="btn" href="export.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">Excel/CSV</a>
 </form>
 
-<canvas id="trend" height="80"></canvas>
-
 <table class="tx"><thead><tr>
   <th>Tarih</th><th>Hesap</th><th>Aciklama</th><th>Karsi Taraf</th>
   <th class="num">Tutar</th><th>B/A</th><th class="num">Bakiye</th></tr></thead><tbody>
@@ -75,9 +81,4 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   </tr>
 <?php endforeach; ?>
 </tbody></table>
-
-<script>window.TX = <?= json_encode(array_map(function($r){
-  return ['tarih'=>$r['tarih'],'tutar'=>(float)$r['tutar'],'ba'=>$r['borc_alacak']];
-}, $rows), JSON_UNESCAPED_UNICODE) ?>;</script>
-<script src="assets/app.js"></script>
 </body></html>
