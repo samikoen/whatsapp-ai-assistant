@@ -20,11 +20,13 @@ $acc  = $_GET['acc']  ?? '';
 $from = $_GET['from'] ?? date('Y-m-01');
 $to   = $_GET['to']   ?? date('Y-m-d');
 $q    = trim($_GET['q'] ?? '');
+$showKesinti = isset($_GET['show_kesinti']); // varsayilan: gizli (tabloyla ayni davranis)
 
 $where = ["t.tarih BETWEEN :from AND :to"];
 $params = [':from' => $from, ':to' => $to];
 if ($acc !== '') { $where[] = "t.account_id = :acc"; $params[':acc'] = (int)$acc; }
 if ($q !== '')   { $where[] = "(t.aciklama LIKE :q OR t.karsi_taraf LIKE :q)"; $params[':q'] = "%$q%"; }
+if (!$showKesinti){ $where[] = "t.aciklama NOT LIKE :kes"; $params[':kes'] = '%KESİNTİ VE EKLER%'; }
 $sql = "SELECT t.tarih, a.iban, t.aciklama, t.karsi_taraf, t.tutar, t.borc_alacak,
                t.para_birimi, t.bakiye_sonrasi
         FROM transactions t JOIN accounts a ON a.id = t.account_id

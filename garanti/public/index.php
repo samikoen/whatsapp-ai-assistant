@@ -9,6 +9,7 @@ $acc   = $_GET['acc']  ?? '';
 $from  = $_GET['from'] ?? date('Y-m-01');
 $to    = $_GET['to']   ?? date('Y-m-d');
 $q     = trim($_GET['q'] ?? '');
+$showKesinti = isset($_GET['show_kesinti']); // varsayilan: gizli (banka masraf/kesinti kayitlari)
 
 $accounts = $pdo->query("SELECT * FROM accounts WHERE aktif = 1 ORDER BY id")
                 ->fetchAll(PDO::FETCH_ASSOC);
@@ -17,6 +18,7 @@ $where = ["t.tarih BETWEEN :from AND :to"];
 $params = [':from' => $from, ':to' => $to];
 if ($acc !== '')  { $where[] = "t.account_id = :acc"; $params[':acc'] = (int)$acc; }
 if ($q !== '')    { $where[] = "(t.aciklama LIKE :q OR t.karsi_taraf LIKE :q)"; $params[':q'] = "%$q%"; }
+if (!$showKesinti){ $where[] = "t.aciklama NOT LIKE :kes"; $params[':kes'] = '%KESİNTİ VE EKLER%'; }
 $sql = "SELECT t.*, a.iban, a.ad FROM transactions t
         JOIN accounts a ON a.id = t.account_id
         WHERE " . implode(' AND ', $where) . " ORDER BY t.tarih DESC, t.id DESC LIMIT 500";
@@ -62,6 +64,7 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   <input type="date" name="from" value="<?= htmlspecialchars($from) ?>">
   <input type="date" name="to" value="<?= htmlspecialchars($to) ?>">
   <input type="text" name="q" placeholder="Ara (aciklama/karsi taraf)" value="<?= htmlspecialchars($q) ?>">
+  <label class="chk"><input type="checkbox" name="show_kesinti" value="1" <?= $showKesinti ? 'checked' : '' ?>> Kesinti ve eklerini goster</label>
   <button type="submit">Filtrele</button>
   <a class="btn" href="export.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">Excel/CSV</a>
 </form>
