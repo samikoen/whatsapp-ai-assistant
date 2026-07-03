@@ -64,7 +64,7 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   <input type="date" name="from" value="<?= htmlspecialchars($from) ?>">
   <input type="date" name="to" value="<?= htmlspecialchars($to) ?>">
   <input type="text" name="q" placeholder="Ara (aciklama/karsi taraf)" value="<?= htmlspecialchars($q) ?>">
-  <label class="chk"><input type="checkbox" name="show_kesinti" value="1" <?= $showKesinti ? 'checked' : '' ?>> Kesinti ve eklerini goster</label>
+  <label class="chk"><input type="checkbox" name="show_kesinti" value="1" onchange="this.form.submit()" <?= $showKesinti ? 'checked' : '' ?>> Kesinti ve eklerini goster</label>
   <button type="submit">Filtrele</button>
   <a class="btn" href="export.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">Excel/CSV</a>
 </form>
