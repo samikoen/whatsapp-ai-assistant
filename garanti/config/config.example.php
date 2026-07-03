@@ -23,7 +23,12 @@ return [
         'username'      => 'admin',
         'password_hash' => 'BURAYA_HASH',
     ],
+    'cron' => [
+        // cron.php?key=... cagrisi icin uzun rastgele anahtar:
+        // php -r "echo bin2hex(random_bytes(24));"
+        'key' => 'BURAYA_RASTGELE_UZUN_ANAHTAR',
+    ],
     'sync' => [
-        'lookback_days' => 7,
+        'lookback_days' => 2, // cron her 30 dk kosar; 2 gun geriye bakmak yeterli
     ],
 ];
