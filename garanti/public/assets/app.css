@@ -25,14 +25,14 @@ table.tx tr:last-child td { border-bottom: none; }
 table.tx thead th { font-size: 12px; color: #6b7280; font-weight: 600; }
 .col-tarih { width: 12%; }
 .col-aciklama { width: 23%; font-size: 13px; color: #4b5563; overflow-wrap: anywhere; }
-.col-karsi { width: 19%; font-size: 13px; color: #1f2937; overflow-wrap: anywhere; }
-.col-tutar { width: 24%; }
-.col-bakiye { width: 22%; }
+.col-karsi { width: 13%; font-size: 13px; color: #1f2937; overflow-wrap: anywhere; }
+.col-tutar { width: 28%; }
+.col-bakiye { width: 24%; }
 table.tx .num { text-align: right; font-variant-numeric: tabular-nums; }
 table.tx .gun { font-weight: 600; color: #374151; }
 table.tx .saat { font-size: 12px; color: #9ca3af; }
-td.col-tutar { font-size: 22px; font-weight: 700; }
-td.col-bakiye { font-size: 16px; color: #6b7280; }
+td.col-tutar { font-size: 44px; font-weight: 700; }
+td.col-bakiye { font-size: 32px; color: #6b7280; }
 tr.debit td.col-tutar { color: #b91c1c; } tr.credit td.col-tutar { color: #047857; }
 body.login { display: flex; align-items: center; justify-content: center; height: 100vh; }
 .login-box { background: #fff; padding: 30px; border-radius: 12px; width: 300px; display: flex; flex-direction: column; gap: 12px; }
