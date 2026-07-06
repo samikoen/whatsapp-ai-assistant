@@ -40,6 +40,16 @@ $balSql = "SELECT para_birimi, SUM(kapanis_bakiye) toplam FROM (
            ) x WHERE rn = 1 GROUP BY para_birimi";
 $balances = [];
 try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Throwable $e) { /* window fn yoksa bos */ }
+
+/**
+ * banka_ref (transactionInstanceId) tam zaman damgasi tasir, ornek:
+ * "2026-07-02T04:26:15.527794" — 'tarih' kolonu sadece gunu tuttugu icin
+ * saat:dakika buradan cikarilir.
+ */
+function islemSaati(string $bankaRef): ?string
+{
+    return preg_match('/T(\d{2}:\d{2})/', $bankaRef, $m) ? $m[1] : null;
+}
 ?><!doctype html><html lang="tr"><head><meta charset="utf-8">
 <title>Garanti Hesap Takip</title><link rel="stylesheet" href="assets/app.css">
 </head><body>
@@ -84,7 +94,7 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   <th class="num">Tutar</th><th class="num">Bakiye</th></tr></thead><tbody>
 <?php foreach ($rows as $r): ?>
   <tr class="<?= $r['borc_alacak'] === 'D' ? 'debit' : 'credit' ?>">
-    <td><?= htmlspecialchars($r['tarih']) ?></td>
+    <td><?= htmlspecialchars($r['tarih']) ?><?php if ($saat = islemSaati((string)$r['banka_ref'])): ?> <span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?></td>
     <td><?= htmlspecialchars((string)$r['aciklama']) ?></td>
     <td><?= htmlspecialchars((string)$r['karsi_taraf']) ?></td>
     <td class="num"><?= number_format((float)$r['tutar'], 2, ',', '.') ?></td>
