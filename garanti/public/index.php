@@ -89,22 +89,17 @@ function islemSaati(string $bankaRef): ?string
   <a class="btn" href="export.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">Excel/CSV</a>
 </form>
 
-<div class="tx-list">
+<div class="tx-wrap"><table class="tx"><thead><tr>
+  <th class="col-tarih">Tarih</th><th class="col-aciklama">Aciklama</th><th class="col-karsi">Karsi Taraf</th>
+  <th class="num col-tutar">Tutar</th><th class="num col-bakiye">Bakiye</th></tr></thead><tbody>
 <?php foreach ($rows as $r): $debit = $r['borc_alacak'] === 'D'; ?>
-  <div class="tx-row <?= $debit ? 'debit' : 'credit' ?>">
-    <div class="tx-line1">
-      <span class="tarih">
-        <span class="gun"><?= htmlspecialchars(date('d.m', strtotime($r['tarih']))) ?></span>
-        <?php if ($saat = islemSaati((string)$r['banka_ref'])): ?><span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?>
-      </span>
-      <span class="tutar num"><?= $debit ? '-' : '+' ?><?= number_format((float)$r['tutar'], 2, ',', '.') ?></span>
-    </div>
-    <div class="tx-line2 aciklama"><?= htmlspecialchars((string)$r['aciklama']) ?></div>
-    <div class="tx-line3">
-      <span class="karsi-taraf"><?= htmlspecialchars((string)$r['karsi_taraf']) ?></span>
-      <span class="bakiye num"><?= $r['bakiye_sonrasi'] !== null ? number_format((float)$r['bakiye_sonrasi'], 2, ',', '.') : '' ?></span>
-    </div>
-  </div>
+  <tr class="<?= $debit ? 'debit' : 'credit' ?>">
+    <td class="col-tarih"><span class="gun"><?= htmlspecialchars(date('d.m', strtotime($r['tarih']))) ?></span><?php if ($saat = islemSaati((string)$r['banka_ref'])): ?><br><span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?></td>
+    <td class="col-aciklama"><?= htmlspecialchars((string)$r['aciklama']) ?></td>
+    <td class="col-karsi"><?= htmlspecialchars((string)$r['karsi_taraf']) ?></td>
+    <td class="num col-tutar"><?= $debit ? '-' : '+' ?><?= number_format((float)$r['tutar'], 2, ',', '.') ?></td>
+    <td class="num col-bakiye"><?= $r['bakiye_sonrasi'] !== null ? number_format((float)$r['bakiye_sonrasi'], 2, ',', '.') : '' ?></td>
+  </tr>
 <?php endforeach; ?>
-</div>
+</tbody></table></div>
 </body></html>
