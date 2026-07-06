@@ -21,6 +21,7 @@ header nav .btn { background: #0d7a48; }
 table.tx { width: calc(100% - 44px); margin: 0 22px 30px; border-collapse: collapse; background: #fff; }
 table.tx th, table.tx td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; }
 table.tx .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.tx .gun { font-weight: 600; }
 table.tx .saat { color: #9ca3af; font-size: 12px; }
 tr.debit .num { color: #b91c1c; } tr.credit .num { color: #047857; }
 body.login { display: flex; align-items: center; justify-content: center; height: 100vh; }

@@ -94,7 +94,7 @@ function islemSaati(string $bankaRef): ?string
   <th class="num">Tutar</th><th class="num">Bakiye</th></tr></thead><tbody>
 <?php foreach ($rows as $r): ?>
   <tr class="<?= $r['borc_alacak'] === 'D' ? 'debit' : 'credit' ?>">
-    <td><?= htmlspecialchars($r['tarih']) ?><?php if ($saat = islemSaati((string)$r['banka_ref'])): ?> <span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?></td>
+    <td><span class="gun"><?= htmlspecialchars(date('d.m', strtotime($r['tarih']))) ?></span><?php if ($saat = islemSaati((string)$r['banka_ref'])): ?><br><span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?></td>
     <td><?= htmlspecialchars((string)$r['aciklama']) ?></td>
     <td><?= htmlspecialchars((string)$r['karsi_taraf']) ?></td>
     <td class="num"><?= number_format((float)$r['tutar'], 2, ',', '.') ?></td>
