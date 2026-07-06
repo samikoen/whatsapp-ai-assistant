@@ -1,8 +1,27 @@
 <?php
 require __DIR__ . '/_guard.php';
 use Garanti\Db\Database;
+use Garanti\Sync\SyncRunner;
 
 $pdo = Database::connect(config('db'));
+
+/**
+ * Otomatik yenileme: sayfa her acildiginda, son senkrondan itibaren belirli
+ * bir sure gectiyse banka API'sinden taze veri cekilir. Esik, art arda sayfa
+ * yenilemelerinde bankayi gereksiz yormamak icin var; esik asilmadiysa
+ * mevcut veri hemen (banka API'sini beklemeden) gosterilir.
+ */
+$otoYenilemeEsikSaniye = 180; // 3 dakika
+$otoYenilenen = null;
+$otoYenilemeHata = null;
+$sonSenkron = $pdo->query("SELECT MAX(baslangic) FROM sync_log")->fetchColumn();
+if ($sonSenkron === false || $sonSenkron === null || (time() - strtotime((string)$sonSenkron)) > $otoYenilemeEsikSaniye) {
+    try {
+        $otoYenilenen = SyncRunner::run(config());
+    } catch (\Throwable $e) {
+        $otoYenilemeHata = substr($e->getMessage(), 0, 200);
+    }
+}
 
 $accounts = $pdo->query("SELECT * FROM accounts WHERE aktif = 1 ORDER BY id")
                 ->fetchAll(PDO::FETCH_ASSOC);
@@ -65,6 +84,10 @@ function islemSaati(string $bankaRef): ?string
   <p class="notice ok">Guncellendi — <?= (int)$_GET['synced'] ?> yeni hareket alindi.</p>
 <?php elseif (isset($_GET['syncerr'])): ?>
   <p class="notice err">Guncelleme hatasi: <?= htmlspecialchars($_GET['syncerr']) ?></p>
+<?php elseif ($otoYenilenen !== null): ?>
+  <p class="notice ok">Otomatik yenilendi — <?= (int)$otoYenilenen ?> yeni hareket.</p>
+<?php elseif ($otoYenilemeHata !== null): ?>
+  <p class="notice err">Otomatik yenileme hatasi: <?= htmlspecialchars($otoYenilemeHata) ?></p>
 <?php endif; ?>
 
 <section class="summary">
