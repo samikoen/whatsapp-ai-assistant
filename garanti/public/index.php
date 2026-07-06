@@ -89,17 +89,22 @@ function islemSaati(string $bankaRef): ?string
   <a class="btn" href="export.php?<?= htmlspecialchars(http_build_query($_GET)) ?>">Excel/CSV</a>
 </form>
 
-<table class="tx"><thead><tr>
-  <th>Tarih</th><th>Aciklama</th><th>Karsi Taraf</th>
-  <th class="num">Tutar</th><th class="num">Bakiye</th></tr></thead><tbody>
-<?php foreach ($rows as $r): ?>
-  <tr class="<?= $r['borc_alacak'] === 'D' ? 'debit' : 'credit' ?>">
-    <td><span class="gun"><?= htmlspecialchars(date('d.m', strtotime($r['tarih']))) ?></span><?php if ($saat = islemSaati((string)$r['banka_ref'])): ?><br><span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?></td>
-    <td><?= htmlspecialchars((string)$r['aciklama']) ?></td>
-    <td><?= htmlspecialchars((string)$r['karsi_taraf']) ?></td>
-    <td class="num"><?= number_format((float)$r['tutar'], 2, ',', '.') ?></td>
-    <td class="num"><?= $r['bakiye_sonrasi'] !== null ? number_format((float)$r['bakiye_sonrasi'], 2, ',', '.') : '' ?></td>
-  </tr>
+<div class="tx-list">
+<?php foreach ($rows as $r): $debit = $r['borc_alacak'] === 'D'; ?>
+  <div class="tx-row <?= $debit ? 'debit' : 'credit' ?>">
+    <div class="tx-line1">
+      <span class="tarih">
+        <span class="gun"><?= htmlspecialchars(date('d.m', strtotime($r['tarih']))) ?></span>
+        <?php if ($saat = islemSaati((string)$r['banka_ref'])): ?><span class="saat"><?= htmlspecialchars($saat) ?></span><?php endif; ?>
+      </span>
+      <span class="tutar num"><?= $debit ? '-' : '+' ?><?= number_format((float)$r['tutar'], 2, ',', '.') ?></span>
+    </div>
+    <div class="tx-line2 aciklama"><?= htmlspecialchars((string)$r['aciklama']) ?></div>
+    <div class="tx-line3">
+      <span class="karsi-taraf"><?= htmlspecialchars((string)$r['karsi_taraf']) ?></span>
+      <span class="bakiye num"><?= $r['bakiye_sonrasi'] !== null ? number_format((float)$r['bakiye_sonrasi'], 2, ',', '.') : '' ?></span>
+    </div>
+  </div>
 <?php endforeach; ?>
-</tbody></table>
+</div>
 </body></html>
