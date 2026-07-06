@@ -4,15 +4,21 @@ use Garanti\Db\Database;
 
 $pdo = Database::connect(config('db'));
 
+$accounts = $pdo->query("SELECT * FROM accounts WHERE aktif = 1 ORDER BY id")
+                ->fetchAll(PDO::FETCH_ASSOC);
+
 // Filtreler
-$acc   = $_GET['acc']  ?? '';
+// "Tum hesaplar" secenegi yok — her zaman bir hesap secili olur (varsayilan: ilk hesap)
+$acc   = $_GET['acc']  ?? (string)($accounts[0]['id'] ?? '');
 $from  = $_GET['from'] ?? date('Y-m-01');
 $to    = $_GET['to']   ?? date('Y-m-d');
 $q     = trim($_GET['q'] ?? '');
 $showKesinti = isset($_GET['show_kesinti']); // varsayilan: gizli (banka masraf/kesinti kayitlari)
 
-$accounts = $pdo->query("SELECT * FROM accounts WHERE aktif = 1 ORDER BY id")
-                ->fetchAll(PDO::FETCH_ASSOC);
+$secilenHesap = null;
+foreach ($accounts as $a) {
+    if ((string)$a['id'] === (string)$acc) { $secilenHesap = $a; break; }
+}
 
 $where = ["t.tarih BETWEEN :from AND :to"];
 $params = [':from' => $from, ':to' => $to];
@@ -41,6 +47,10 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
   <nav><a class="btn" href="refresh.php">&#8635; Yenile</a> <a href="logout.php">Cikis</a></nav>
 </header>
 
+<?php if ($secilenHesap): ?>
+  <p class="secili-hesap">Secili Hesap: <strong><?= htmlspecialchars($secilenHesap['iban']) ?></strong><?= $secilenHesap['ad'] ? ' — ' . htmlspecialchars($secilenHesap['ad']) : '' ?></p>
+<?php endif; ?>
+
 <?php if (isset($_GET['synced'])): ?>
   <p class="notice ok">Guncellendi — <?= (int)$_GET['synced'] ?> yeni hareket alindi.</p>
 <?php elseif (isset($_GET['syncerr'])): ?>
@@ -55,7 +65,7 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
 </section>
 
 <form class="filters" method="get">
-  <select name="acc"><option value="">Tum hesaplar</option>
+  <select name="acc" onchange="this.form.submit()">
     <?php foreach ($accounts as $a): ?>
       <option value="<?= htmlspecialchars((string)$a['id']) ?>" <?= $acc == $a['id'] ? 'selected' : '' ?>>
         <?= htmlspecialchars($a['iban']) ?></option>
@@ -70,16 +80,14 @@ try { $balances = $pdo->query($balSql)->fetchAll(PDO::FETCH_ASSOC); } catch (\Th
 </form>
 
 <table class="tx"><thead><tr>
-  <th>Tarih</th><th>Hesap</th><th>Aciklama</th><th>Karsi Taraf</th>
-  <th class="num">Tutar</th><th>B/A</th><th class="num">Bakiye</th></tr></thead><tbody>
+  <th>Tarih</th><th>Aciklama</th><th>Karsi Taraf</th>
+  <th class="num">Tutar</th><th class="num">Bakiye</th></tr></thead><tbody>
 <?php foreach ($rows as $r): ?>
   <tr class="<?= $r['borc_alacak'] === 'D' ? 'debit' : 'credit' ?>">
     <td><?= htmlspecialchars($r['tarih']) ?></td>
-    <td><?= htmlspecialchars($r['iban']) ?></td>
     <td><?= htmlspecialchars((string)$r['aciklama']) ?></td>
     <td><?= htmlspecialchars((string)$r['karsi_taraf']) ?></td>
     <td class="num"><?= number_format((float)$r['tutar'], 2, ',', '.') ?></td>
-    <td><?= $r['borc_alacak'] === 'D' ? 'Borc' : 'Alacak' ?></td>
     <td class="num"><?= $r['bakiye_sonrasi'] !== null ? number_format((float)$r['bakiye_sonrasi'], 2, ',', '.') : '' ?></td>
   </tr>
 <?php endforeach; ?>

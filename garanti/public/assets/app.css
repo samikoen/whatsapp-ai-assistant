@@ -14,6 +14,7 @@ header h1 { font-size: 18px; margin: 0; } header a { color: #cfe9d9; }
   border-radius: 8px; text-decoration: none; cursor: pointer; }
 header nav { display: flex; gap: 12px; align-items: center; }
 header nav .btn { background: #0d7a48; }
+.secili-hesap { margin: 14px 22px 0; font-size: 15px; color: #374151; }
 .notice { margin: 14px 22px 0; padding: 10px 14px; border-radius: 8px; font-size: 14px; }
 .notice.ok { background: #d1fae5; color: #065f46; }
 .notice.err { background: #fee2e2; color: #991b1b; }
