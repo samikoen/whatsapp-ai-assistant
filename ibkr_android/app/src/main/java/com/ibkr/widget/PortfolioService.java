@@ -565,22 +565,24 @@ public class PortfolioService extends Service {
         }
     }
 
-    // NAV degerini status bar ikonu olarak render et (orn: "1.0M")
-    // One UI 8.5 Samsung Live notification chip third-party'ye kapali oldugu icin
-    // rakami dogrudan kucuk ikon olarak ciziyoruz (her One UI surumunde calisir).
-    private android.graphics.drawable.Icon createTextIcon(String text, int bgColor) {
+    // NAV degerini status bar ikonu olarak render et (orn: "97")
+    // ARKA PLAN KUTUSU YOK - sadece rakam cizilir. Sebep: One UI normal ikon
+    // alaninda ikonlara beyaz ALFA-TINT uygular; opak kutu tamamen beyaz
+    // bloga donusuyordu (10 Tem 2026). Kutusuz cizimde:
+    //   - tint'li mod: rakamlar beyaz gorunur (saat yazisi gibi)
+    //   - renkli chip modu: rakamlar accent renginde (yesil/kirmizi) gorunur
+    private android.graphics.drawable.Icon createTextIcon(String text, int accentColor) {
         float density = getResources().getDisplayMetrics().density;
-        int h = (int) (48 * density);
-        // KARE bitmap - sistem yuvayi tam doldurur (zemin buyuk gorunur)
+        // KARE bitmap - sistem yuvayi tam doldurur
         int side = (int) (48 * density);
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setColor(0xFFFFFFFF);
+        textPaint.setColor(accentColor);
         textPaint.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setFakeBoldText(true);
 
-        // Rakami karenin genisligine sigacak sekilde olceklendir (yatay padding %3)
-        float maxTextW = side * 0.94f;
+        // Rakami karenin genisligine sigacak sekilde olceklendir (padding yok)
+        float maxTextW = side * 0.98f;
         float ts = side * 0.95f;
         textPaint.setTextSize(ts);
         float tw = textPaint.measureText(text);
@@ -591,11 +593,6 @@ public class PortfolioService extends Service {
 
         Bitmap bmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
-        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(bgColor);
-        bgPaint.setStyle(Paint.Style.FILL);
-        float r = side * 0.24f;
-        canvas.drawRoundRect(0, 0, side, side, r, r, bgPaint);
         float y = side / 2f - (textPaint.descent() + textPaint.ascent()) / 2f;
         canvas.drawText(text, side / 2f, y, textPaint);
         return android.graphics.drawable.Icon.createWithBitmap(bmp);
