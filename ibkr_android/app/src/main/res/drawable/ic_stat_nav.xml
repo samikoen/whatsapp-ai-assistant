@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar small icon: monokrom yukari-ok ucgeni.
+     Custom bitmap yerine bu kullanilir ki Android 16 Live Update chip'i
+     shortCriticalText'i sistem fontuyla basabilsin. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4 L21,19 L3,19 Z" />
+</vector>
