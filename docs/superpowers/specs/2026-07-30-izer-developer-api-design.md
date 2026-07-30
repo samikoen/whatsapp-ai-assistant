@@ -66,7 +66,7 @@ Mevcut endpoint'ler korunur, sadece auth katmanı eklenir. İzer aynı URL'leri 
 
 | Amaç | Endpoint |
 |------|----------|
-| Katalog (ürün+varyant+görsel+spec) | `GET /b2b/data/eu-catalog-grouped.json` (statik) veya sarmalayıcı |
+| Katalog (ürün+varyant+görsel+spec) | `GET /b2b/data/eu-catalog-grouped.json` — statik dosya, zaten açık, İzer doğrudan indirir (API-key gerektirmez) |
 | Trek canlı dealer fiyatı | `POST /b2b/api/dealer/get-trek-prices.php` {skus:[...]} |
 | Bayi fiyat çarpanı | `GET /b2b/api/dealer/get-pricing.php` |
 | Manuel fiyatlar | `GET /b2b/api/dealer/get-custom-prices.php` |
