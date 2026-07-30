@@ -14,8 +14,12 @@ tüm verilerine **okuma + yazma** erişimi veren, dokümante ve iptal edilebilir
 ## Kapsam
 
 - **Okuma:** katalog, fiyat (Trek dealer + bayi + manuel + DE/B2C), stok (TR + EU/NCI/DDC + ETA), değişiklikler
-- **Yazma:** sipariş oluştur / iptal / sorgula
-- **Yazma bağlamı:** anahtar `dealer_id` parametresiyle **herhangi bir bayi** adına sipariş açabilir (esnek — seçenek b)
+- **Yazma (TAM — okumadaki her kategorinin yazma karşılığı, admin seviyesi):**
+  - Sipariş: oluştur / iptal / durum güncelle / sorgula
+  - Fiyat: manuel fiyat belirle-sil, bayi çarpanı (genel + kategori) ayarla-sil
+  - Bayi: oluştur / güncelle / sil
+  - Stok & katalog: NCI CSV import, EPOS sync tetikle
+- **Yazma bağlamı:** anahtar `dealer_id` parametresiyle **herhangi bir bayi** adına sipariş açabilir (esnek — seçenek b). Diğer yazma işlemleri admin seviyesindedir (bayi/fiyat/stok yönetimi).
 
 ## Mimari — Yaklaşım A (mevcut endpoint'lere API-key katmanı)
 
@@ -76,17 +80,41 @@ Mevcut endpoint'ler korunur, sadece auth katmanı eklenir. İzer aynı URL'leri 
 | TR depo stok (BizimHesap) | `GET https://video.trek-turkey.com/bizimhesap-warehouse-with-prices-b2b-api-v2.php` (bu zaten açık) |
 | Stok/fiyat değişiklikleri | `GET /b2b/api/dealer/get-changes-v3.php` |
 
-### Yazma (scope: read_write)
+### Yazma (scope: read_write) — TAM
 
+**Sipariş**
 | Amaç | Endpoint |
 |------|----------|
 | Sipariş oluştur | `POST /b2b/api/orders/create.php` (+ `dealer_id`) |
 | Sipariş iptal | `POST /b2b/api/orders/cancel.php` |
+| Sipariş durum güncelle | `POST /b2b/api/admin/orders/update-status.php` |
 | Sipariş sorgula | `GET /b2b/api/orders/list.php`, `GET /b2b/api/orders/detail.php` |
+
+**Fiyat yönetimi**
+| Amaç | Endpoint |
+|------|----------|
+| Manuel fiyat belirle/sil | `POST /b2b/api/admin/products/set-custom-price.php` |
+| Bayi genel çarpanı | `POST /b2b/api/admin/dealers/update-general-multiplier.php` |
+| Kategori çarpanı belirle | `POST /b2b/api/admin/dealers/set-category-multiplier.php` |
+| Kategori çarpanı sil | `POST /b2b/api/admin/dealers/delete-category-multiplier.php` |
+| Bayi fiyatlandırma | `POST /b2b/api/admin/dealers/set-pricing.php` |
+
+**Bayi yönetimi**
+| Amaç | Endpoint |
+|------|----------|
+| Bayi oluştur | `POST /b2b/api/admin/dealers/create.php` |
+| Bayi güncelle | `POST /b2b/api/admin/dealers/update.php` |
+| Bayi sil | `POST /b2b/api/admin/dealers/delete.php` |
+
+**Stok & katalog**
+| Amaç | Endpoint |
+|------|----------|
+| NCI CSV import | `POST /b2b/api/admin/nci/import-csv.php` |
+| EPOS sync tetikle | `GET /b2b/api/cron/sync-wrapper.php` (secret ile — İzer'e secret verilir) |
 
 **Sipariş yazma (seçenek b):** API-key ile gelen `create.php` isteği, body'deki `dealer_id`'yi
 kullanır. JWT ile gelen (portal) istekler eskisi gibi token'daki bayiyi kullanır — davranış değişmez.
-`dealer_id` geçersizse 400.
+`dealer_id` geçersizse 400. Diğer admin yazma endpoint'leri zaten global (bayi-bağımsız).
 
 ## Güvenlik
 
@@ -111,8 +139,9 @@ Tek dosya: `b2b/api/API-DOCS-IZER.md`
 - Okuma: her endpoint'i X-API-Key ile çağır, JWT ile aynı sonucu döndürmeli.
 - Scope: read anahtarıyla `create.php` → 403.
 - İptal: `active=0` sonrası tüm çağrılar → 401.
-- Yazma: read_write anahtar + `dealer_id` ile test siparişi oluştur, sonra iptal et.
-- JWT yolu bozulmadı: bayi portalı normal çalışmalı (regresyon).
+- Yazma (sipariş): read_write anahtar + `dealer_id` ile test siparişi oluştur, sonra iptal et.
+- Yazma (admin): read_write anahtarla manuel fiyat belirle/sil, çarpan ayarla, test bayisi oluştur/sil — her biri DB'de doğrulanır.
+- JWT yolu bozulmadı: bayi portalı + admin paneli normal çalışmalı (regresyon).
 
 ## Kapsam Dışı (ilk sürüm)
 
@@ -123,9 +152,14 @@ Tek dosya: `b2b/api/API-DOCS-IZER.md`
 
 ## Riskler
 
-- **Sipariş yazma (seçenek b):** İzer yanlış `dealer_id` ile sipariş açabilir. Kabul edildi
-  (İzer güvenilir, geliştirme amaçlı). Gerçek sipariş akışında dikkat; test için ayrı bir
-  test-bayisi kullanmak önerilir.
+- **Admin seviyesi yazma (geniş yetki):** İzer'in anahtarı bayi silebilir, fiyat/çarpan
+  değiştirebilir, EPOS sync tetikleyebilir. Yanlışlıkla veya hatalı kodla üretim verisi
+  bozulabilir. Kabul edildi (İzer güvenilir geliştirici). Azaltıcılar: (1) anahtar `active=0`
+  ile anında iptal, (2) `request_count`/`last_used` ile izleme, (3) İleride yazma işlemleri
+  `api_request_log`'a yazılabilir — kim ne değiştirdi görünür. **Öneri:** kritik yazma
+  (bayi sil, EPOS sync) öncesi İzer'in test-bayisi/staging kullanması.
+- **Sipariş yazma (seçenek b):** İzer yanlış `dealer_id` ile sipariş açabilir. Kabul edildi.
+  Gerçek sipariş akışında dikkat; test için ayrı bir test-bayisi kullanmak önerilir.
 - **TR stok endpoint'i zaten açık** (auth'suz) — İzer'e vermek ek risk getirmez ama not edilmeli.
 - **get-trek-prices** Trek B2B site login'ine bağlı; İzer yoğun çağırırsa Trek oturumu/ban riski.
   Proxy'nin cache'i (6 saat) bunu büyük ölçüde önler.
