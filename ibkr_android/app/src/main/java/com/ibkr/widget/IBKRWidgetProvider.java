@@ -106,6 +106,7 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
 
         // Gun ici seans grafigi serisi (yoksa grafik alani ayrilmaz)
         NavSeries.Data series = NavSeries.parse(prefs.getString("nav_series", null));
+        float prevCloseNav = prefs.getFloat("prev_close_nav", Float.NaN);
 
         // Widget'in ANA EKRANDAKI gercek olculeri - kullanici buyuttugunde
         // fazla yukseklik bos kalmasin diye bitmap ayni orana cizilir.
@@ -142,10 +143,10 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
         if (navText != null && changeText != null) {
             gauge = GaugeDrawer.draw(bmpW, gaugeH, chartH, navText, changeText,
                     pctChange, vixValue, trendArrow, trendColor, totalReturnPct,
-                    hasSideData ? sidePcts : null, sideLogos, vixChangePct, series);
+                    hasSideData ? sidePcts : null, sideLogos, vixChangePct, series, prevCloseNav);
         } else {
             gauge = GaugeDrawer.draw(bmpW, gaugeH, chartH, "$---,---", "app'i ac",
-                    0f, 20f, "▸", 0xFF64748B, Float.NaN, null, sideLogos, 0f, series);
+                    0f, 20f, "▸", 0xFF64748B, Float.NaN, null, sideLogos, 0f, series, prevCloseNav);
         }
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);

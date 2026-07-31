@@ -37,7 +37,7 @@ public class GaugeDrawer {
                               float pctChange, float vixValue, String trendArrow, int trendColor,
                               float totalReturnPct,
                               float[] sidePcts, Bitmap[] sideLogos, float vixChangePct,
-                              NavSeries.Data series) {
+                              NavSeries.Data series, float prevCloseNav) {
         int totalH = height + Math.max(0, chartHeight);
         Bitmap bitmap;
         if (cachedBitmap != null && !cachedBitmap.isRecycled()
@@ -149,7 +149,7 @@ public class GaugeDrawer {
 
         // 11. Gun ici seans grafigi (gauge'un altinda)
         if (chartHeight > 0 && series != null) {
-            SessionChartDrawer.draw(canvas, 0, height, width, chartHeight, series);
+            SessionChartDrawer.draw(canvas, 0, height, width, chartHeight, series, prevCloseNav);
         }
 
         return bitmap;

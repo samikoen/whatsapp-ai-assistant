@@ -577,7 +577,11 @@ public class PortfolioService extends Service {
             // Gun ici NAV serisi (widget grafigi) - basarisiz olursa onceki seri kalir
             if (prevCloseValid) {
                 String series = NavSeries.build(allResults, symbols, tickers, cash, prevCloseNAV);
-                if (series != null) editor.putString("nav_series", series);
+                if (series != null) {
+                    editor.putString("nav_series", series);
+                    // Grafikteki min/max cizgilerini $ olarak yazabilmek icin baseline
+                    editor.putFloat("prev_close_nav", (float) prevCloseNAV);
+                }
             }
 
             // Underlying asset verileri (JSON olarak sakla)

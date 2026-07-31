@@ -30,11 +30,18 @@ public class SessionChartDrawer {
     private static final int COL_SEP  = 0x70475569;
     private static final int COL_BASE = 0xA0647488;
     private static final int COL_TIME = 0xFF7C8CA3;
+    private static final int COL_HILO      = 0x9AFBBF24;  // gun ici min/max cizgileri
+    private static final int COL_HILO_TEXT = 0xFFFBBF24;
 
     /** Yuzde ekseninde en dar aralik (duz cizgi gurultu gibi gorunmesin). */
     private static final float MIN_SPAN_PCT = 0.30f;
 
-    static void draw(Canvas canvas, float x, float y, float w, float h, NavSeries.Data d) {
+    /**
+     * @param prevCloseNav dunku kapanis NAV'i - min/max etiketlerini $ olarak
+     *                     yazmak icin. NaN ise yuzde yazilir.
+     */
+    static void draw(Canvas canvas, float x, float y, float w, float h,
+                     NavSeries.Data d, float prevCloseNav) {
         if (d == null || d.pct == null || d.lastIdx <= d.firstIdx) return;
 
         // Yazi olculeri GENISLIGE bagli - widget dikey buyutulunce yazilar
@@ -88,16 +95,20 @@ public class SessionChartDrawer {
         canvas.drawText("AFTER", (xEnd + plotR) / 2f, lblY, lbl);
 
         // ---- 4) Y ekseni araligi (0 = dunku kapanis her zaman icinde) ----
-        float min = 0f, max = 0f;
+        float dataMin = Float.MAX_VALUE, dataMax = -Float.MAX_VALUE;
         for (int i = d.firstIdx; i <= d.lastIdx; i++) {
             float v = d.pct[i];
             if (Float.isNaN(v)) continue;
-            if (v < min) min = v;
-            if (v > max) max = v;
+            if (v < dataMin) dataMin = v;
+            if (v > dataMax) dataMax = v;
         }
+        if (dataMin > dataMax) return;
+
+        float min = Math.min(0f, dataMin);
+        float max = Math.max(0f, dataMax);
         float mid = (min + max) / 2f;
         float half = Math.max((max - min) / 2f, MIN_SPAN_PCT / 2f);
-        half *= 1.18f;                 // ust/alt nefes payi
+        half *= 1.34f;                 // ust/alt nefes payi (min/max etiketleri sigsin)
         float lo = mid - half, hi = mid + half;
 
         // ---- 5) Baseline (dunku kapanis) ----
@@ -148,35 +159,46 @@ public class SessionChartDrawer {
         linePaint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawPath(line, linePaint);
 
-        // ---- 7) Guncel nokta + yuzde etiketi ----
+        // ---- 7) Gun ici en yuksek / en dusuk cizgileri ----
+        float yHigh = pctToY(dataMax, lo, hi, plotT, plotH);
+        float yLow  = pctToY(dataMin, lo, hi, plotT, plotH);
+
+        Paint hiloPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        hiloPaint.setStyle(Paint.Style.STROKE);
+        hiloPaint.setColor(COL_HILO);
+        hiloPaint.setStrokeWidth(Math.max(1f, unit * 0.055f));
+        hiloPaint.setPathEffect(new DashPathEffect(new float[]{unit * 0.42f, unit * 0.30f}, 0));
+
+        Paint hiloText = new Paint(Paint.ANTI_ALIAS_FLAG);
+        hiloText.setColor(COL_HILO_TEXT);
+        hiloText.setTextSize(unit * 0.70f);
+        hiloText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        hiloText.setTextAlign(Paint.Align.RIGHT);
+        hiloText.setShadowLayer(3, 1, 1, 0xE0000000);
+        float textR = plotR - unit * 0.25f;
+
+        canvas.drawLine(plotL, yHigh, plotR, yHigh, hiloPaint);
+        // Ustte yer varsa cizginin ustune, yoksa altina yaz
+        float highLabelY = (yHigh - unit * 1.00f >= plotT)
+                ? yHigh - unit * 0.28f : yHigh + unit * 0.86f;
+        canvas.drawText(formatLevel(dataMax, prevCloseNav), textR, highLabelY, hiloText);
+
+        // Cok dar aralikta iki etiket ust uste binmesin
+        if (yLow - yHigh > unit * 1.9f) {
+            canvas.drawLine(plotL, yLow, plotR, yLow, hiloPaint);
+            float lowLabelY = (yLow + unit * 0.95f <= plotB)
+                    ? yLow + unit * 0.86f : yLow - unit * 0.28f;
+            canvas.drawText(formatLevel(dataMin, prevCloseNav), textR, lowLabelY, hiloText);
+        }
+
+        // ---- 8) Guncel nokta ----
         Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
         dot.setStyle(Paint.Style.FILL);
         dot.setColor(0xFFFFFFFF);
         float dotR = Math.max(2.5f, unit * 0.20f);
         canvas.drawCircle(lastX, lastY, dotR, dot);
 
-        Paint valPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        valPaint.setColor(lineColor);
-        valPaint.setTextSize(unit * 0.86f);
-        valPaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-        valPaint.setShadowLayer(3, 1, 1, 0xE0000000);
-        String valText = String.format(Locale.US, "%+.2f%%", lastPct);
-
-        // Sagda yer varsa saga, yoksa sola yaz - kenardan tasmasin
-        float gap = dotR * 2.2f;
-        float textW = valPaint.measureText(valText);
-        float valX;
-        if (lastX + gap + textW <= plotR) {
-            valPaint.setTextAlign(Paint.Align.LEFT);
-            valX = lastX + gap;
-        } else {
-            valPaint.setTextAlign(Paint.Align.RIGHT);
-            valX = Math.max(plotL + textW, lastX - gap);
-        }
-        float valY = Math.max(plotT + unit * 0.9f, lastY - dotR * 1.8f);
-        canvas.drawText(valText, valX, valY, valPaint);
-
-        // ---- 8) Saat etiketleri (telefonun yerel saati) ----
+        // ---- 9) Saat etiketleri (telefonun yerel saati) ----
         Paint timePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         timePaint.setColor(COL_TIME);
         timePaint.setTextSize(unit * 0.70f);
@@ -191,6 +213,15 @@ public class SessionChartDrawer {
         canvas.drawText(fmt.format(new Date(d.regEnd * 1000L)), xEnd, timeY, timePaint);
         timePaint.setTextAlign(Paint.Align.RIGHT);
         canvas.drawText(fmt.format(new Date(d.postEnd * 1000L)), plotR, timeY, timePaint);
+    }
+
+    /** Baseline biliniyorsa NAV'i $ olarak, bilinmiyorsa yuzde olarak yazar. */
+    private static String formatLevel(float pct, float prevCloseNav) {
+        if (!Float.isNaN(prevCloseNav) && prevCloseNav > 0) {
+            double nav = prevCloseNav * (1.0 + pct / 100.0);
+            return "$" + String.format(Locale.US, "%,.0f", nav);
+        }
+        return String.format(Locale.US, "%+.2f%%", pct);
     }
 
     private static float pctToY(float pct, float lo, float hi, float plotT, float plotH) {
