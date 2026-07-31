@@ -37,8 +37,11 @@ public class SessionChartDrawer {
     static void draw(Canvas canvas, float x, float y, float w, float h, NavSeries.Data d) {
         if (d == null || d.pct == null || d.lastIdx <= d.firstIdx) return;
 
-        float labelH = h * 0.19f;
-        float timeH  = h * 0.17f;
+        // Yazi olculeri GENISLIGE bagli - widget dikey buyutulunce yazilar
+        // orantisiz sismesin (grafik alani buyur, tipografi sabit kalir).
+        float unit   = Math.min(w * 0.050f, h * 0.24f);
+        float labelH = unit * 1.30f;
+        float timeH  = unit * 1.20f;
         float plotL  = x + w * 0.015f;
         float plotR  = x + w * 0.985f;
         float plotT  = y + labelH;
@@ -65,15 +68,15 @@ public class SessionChartDrawer {
         Paint sep = new Paint(Paint.ANTI_ALIAS_FLAG);
         sep.setStyle(Paint.Style.STROKE);
         sep.setColor(COL_SEP);
-        sep.setStrokeWidth(Math.max(1.2f, h * 0.012f));
-        sep.setPathEffect(new DashPathEffect(new float[]{h * 0.06f, h * 0.045f}, 0));
+        sep.setStrokeWidth(Math.max(1.2f, unit * 0.07f));
+        sep.setPathEffect(new DashPathEffect(new float[]{unit * 0.36f, unit * 0.27f}, 0));
         canvas.drawLine(xReg, plotT, xReg, plotB, sep);
         canvas.drawLine(xEnd, plotT, xEnd, plotB, sep);
 
         // ---- 3) Seans basliklari ----
         Paint lbl = new Paint(Paint.ANTI_ALIAS_FLAG);
         lbl.setTextAlign(Paint.Align.CENTER);
-        lbl.setTextSize(labelH * 0.72f);
+        lbl.setTextSize(unit * 0.82f);
         lbl.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         lbl.setShadowLayer(2, 1, 1, 0xCC000000);
         float lblY = y + labelH * 0.80f;
@@ -102,8 +105,8 @@ public class SessionChartDrawer {
         Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         basePaint.setStyle(Paint.Style.STROKE);
         basePaint.setColor(COL_BASE);
-        basePaint.setStrokeWidth(Math.max(1f, h * 0.010f));
-        basePaint.setPathEffect(new DashPathEffect(new float[]{h * 0.028f, h * 0.035f}, 0));
+        basePaint.setStrokeWidth(Math.max(1f, unit * 0.06f));
+        basePaint.setPathEffect(new DashPathEffect(new float[]{unit * 0.17f, unit * 0.21f}, 0));
         canvas.drawLine(plotL, baseY, plotR, baseY, basePaint);
 
         // ---- 6) NAV egrisi ----
@@ -140,7 +143,7 @@ public class SessionChartDrawer {
         Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setColor(lineColor);
-        linePaint.setStrokeWidth(Math.max(1.8f, h * 0.026f));
+        linePaint.setStrokeWidth(Math.max(1.8f, unit * 0.15f));
         linePaint.setStrokeJoin(Paint.Join.ROUND);
         linePaint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawPath(line, linePaint);
@@ -149,25 +152,34 @@ public class SessionChartDrawer {
         Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
         dot.setStyle(Paint.Style.FILL);
         dot.setColor(0xFFFFFFFF);
-        float dotR = Math.max(2.5f, h * 0.035f);
+        float dotR = Math.max(2.5f, unit * 0.20f);
         canvas.drawCircle(lastX, lastY, dotR, dot);
 
         Paint valPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         valPaint.setColor(lineColor);
-        valPaint.setTextSize(labelH * 0.78f);
+        valPaint.setTextSize(unit * 0.86f);
         valPaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         valPaint.setShadowLayer(3, 1, 1, 0xE0000000);
         String valText = String.format(Locale.US, "%+.2f%%", lastPct);
-        boolean rightSide = lastX < plotR - plotW * 0.22f;
-        valPaint.setTextAlign(rightSide ? Paint.Align.LEFT : Paint.Align.RIGHT);
-        float valX = rightSide ? lastX + dotR * 2.2f : lastX - dotR * 2.2f;
-        float valY = Math.max(plotT + labelH * 0.7f, lastY - dotR * 2.0f);
+
+        // Sagda yer varsa saga, yoksa sola yaz - kenardan tasmasin
+        float gap = dotR * 2.2f;
+        float textW = valPaint.measureText(valText);
+        float valX;
+        if (lastX + gap + textW <= plotR) {
+            valPaint.setTextAlign(Paint.Align.LEFT);
+            valX = lastX + gap;
+        } else {
+            valPaint.setTextAlign(Paint.Align.RIGHT);
+            valX = Math.max(plotL + textW, lastX - gap);
+        }
+        float valY = Math.max(plotT + unit * 0.9f, lastY - dotR * 1.8f);
         canvas.drawText(valText, valX, valY, valPaint);
 
         // ---- 8) Saat etiketleri (telefonun yerel saati) ----
         Paint timePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         timePaint.setColor(COL_TIME);
-        timePaint.setTextSize(timeH * 0.66f);
+        timePaint.setTextSize(unit * 0.70f);
         timePaint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         float timeY = plotB + timeH * 0.78f;
         SimpleDateFormat fmt = new SimpleDateFormat("HH:mm", Locale.US);

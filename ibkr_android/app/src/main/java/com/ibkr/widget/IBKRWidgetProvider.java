@@ -16,8 +16,17 @@ import org.json.JSONObject;
 
 public class IBKRWidgetProvider extends AppWidgetProvider {
 
-    /** Gun ici seans grafiginin yuksekligi (dp) - gauge 200dp'nin altina eklenir. */
-    private static final int CHART_DP = 104;
+    // Gauge'un dogal orani: 380dp genislige 200dp yukseklik.
+    // Gauge GENISLIGE bagli olceklenir (yan paneller + yay icin), yuksekligi
+    // buyutmek onu buyutmez. Bu yuzden kullanicinin verdigi fazla yukseklik
+    // tamamen GRAFIGE aktarilir.
+    private static final float GAUGE_ASPECT = 200f / 380f;
+    private static final int DEFAULT_W_DP = 380;
+    private static final int MIN_CHART_DP = 90;
+    /** Grafik gauge'dan daha baskin olmasin. */
+    private static final float MAX_CHART_RATIO = 1.0f;
+    /** RemoteViews bitmap limitine takilmamak icin ust sinir. */
+    private static final int MAX_PIXELS = 1_300_000;
 
     // Sol kolon (pozisyon buyuk -> kucuk): NVDA, IBIT, NVO
     // Sag kolon (pozisyon buyuk -> kucuk): QQQ, IAU, SMCI
@@ -46,6 +55,14 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
         for (int widgetId : appWidgetIds) {
             updateFromPrefs(context, appWidgetManager, widgetId);
         }
+    }
+
+    /** Kullanici widget'i yeniden boyutlandirinca cizimi yeni olcuye gore yenile. */
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+                                          int widgetId, android.os.Bundle newOptions) {
+        updateFromPrefs(context, manager, widgetId);
+        super.onAppWidgetOptionsChanged(context, manager, widgetId, newOptions);
     }
 
     private void updateFromPrefs(Context context, AppWidgetManager manager, int widgetId) {
@@ -90,11 +107,36 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
         // Gun ici seans grafigi serisi (yoksa grafik alani ayrilmaz)
         NavSeries.Data series = NavSeries.parse(prefs.getString("nav_series", null));
 
-        // Bitmap boyutu - gauge + (varsa) grafik
+        // Widget'in ANA EKRANDAKI gercek olculeri - kullanici buyuttugunde
+        // fazla yukseklik bos kalmasin diye bitmap ayni orana cizilir.
+        int wDp = DEFAULT_W_DP, hDp = 0;
+        try {
+            android.os.Bundle opts = manager.getAppWidgetOptions(widgetId);
+            if (opts != null) {
+                int w = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+                int h = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+                if (w > 0) wDp = w;
+                if (h > 0) hDp = h;
+            }
+        } catch (Exception e) { /* varsayilan olculer */ }
+
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
-        int bmpW = (int) (380 * dm.density);
-        int gaugeH = (int) (200 * dm.density);
-        int chartH = series != null ? (int) (CHART_DP * dm.density) : 0;
+        float scale = dm.density;
+        if (hDp > 0) {
+            // Cok buyuk widget'ta piksel butcesini asma
+            float maxScale = (float) Math.sqrt((double) MAX_PIXELS / (wDp * hDp));
+            if (maxScale < scale) scale = maxScale;
+        }
+
+        int bmpW = (int) (wDp * scale);
+        int gaugeH = Math.round(bmpW * GAUGE_ASPECT);
+        int chartH = 0;
+        if (series != null) {
+            int minChart = Math.round(MIN_CHART_DP * scale);
+            int maxChart = Math.round(gaugeH * MAX_CHART_RATIO);
+            int avail = hDp > 0 ? (int) (hDp * scale) - gaugeH : minChart;
+            chartH = Math.max(minChart, Math.min(maxChart, avail));
+        }
 
         Bitmap gauge;
         if (navText != null && changeText != null) {

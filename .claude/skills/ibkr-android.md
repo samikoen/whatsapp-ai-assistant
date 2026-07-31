@@ -552,7 +552,9 @@ implementation 'androidx.webkit:webkit:1.8.0'
 - **Yeni dosya `SessionChartDrawer.java`**: Seans bantlari (PRE mavi / MARKET yesil / AFTER mor), kesikli ayraclar, noktali baseline (dunku kapanis), dolgulu NAV egrisi, ucunda beyaz nokta + yuzde, altta yerel saatle 4 saat etiketi.
 - **KRITIK - tek bitmap**: Grafik gauge ile AYNI bitmap'e cizilir (ayri ImageView DEGIL). Iki buyuk bitmap RemoteViews boyut limitine takilir. `GaugeDrawer.draw()` artik `chartHeight` + `NavSeries.Data` alir, gauge olculeri `height` parametresine gore hesaplanmaya devam eder.
 - **KRITIK - prefs sismesi**: Ham `ts`/`cl` dizileri prefs'e yazilmamali. `stripSeries()` ile `underlying_data`'dan ayiklanir. Dogrulandi: prefs 2.8 KB.
-- **Widget boyutu**: `widget_info.xml` minHeight 200->250dp, targetCellHeight 2->3. Bitmap 380x200dp -> 380x304dp. Seri yoksa `chartH=0` -> eski gorunum (guvenli geri dusus).
+- **Widget boyutu**: `widget_info.xml` minHeight 200->250dp, targetCellHeight 2->3. Seri yoksa `chartH=0` -> eski gorunum (guvenli geri dusus).
+- **KRITIK - widget yeniden boyutlandirma**: Bitmap `fitCenter` ile cizildigi ve GENISLIGE gore sinirlandigi icin, sabit oranli bitmap kullanilirsa kullanici widget'i uzattiginda icerik BUYUMEZ, sadece bos alan artar. Cozum: `manager.getAppWidgetOptions(widgetId)` ile gercek olcu okunur (`OPTION_APPWIDGET_MIN_WIDTH` / `OPTION_APPWIDGET_MAX_HEIGHT`), bitmap o orana cizilir. Gauge dogal oraninda kalir (genislige bagli), FAZLA YUKSEKLIK TAMAMEN GRAFIGE gider. `onAppWidgetOptionsChanged()` override edilerek resize aninda yeniden cizilir. Piksel butcesi `MAX_PIXELS` ile sinirlanir.
+- **KRITIK - tipografi olcegi**: Grafikteki yazi boyutlari YUKSEKLIGE gore olceklenirse widget uzatilinca yazilar devlesir. `unit = min(w*0.050, h*0.24)` kullanilir - agirlikli olarak genislige bagli. Yuzde etiketi `measureText` ile olculup kenardan tasacaksa sola cevrilir.
 - **Etkilenen dosyalar**: `NavSeries.java` (yeni), `SessionChartDrawer.java` (yeni), `PortfolioService.java`, `GaugeDrawer.java`, `IBKRWidgetProvider.java`, `res/xml/widget_info.xml`
 - **Tasarim dokumani**: `docs/superpowers/specs/2026-07-31-ibkr-widget-session-chart-design.md`
 
