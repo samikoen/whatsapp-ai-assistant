@@ -107,6 +107,10 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
         // Gun ici seans grafigi serisi (yoksa grafik alani ayrilmaz)
         NavSeries.Data series = NavSeries.parse(prefs.getString("nav_series", null));
         float prevCloseNav = prefs.getFloat("prev_close_nav", Float.NaN);
+        // VIX overlay - sadece ayni gune aitse cizilir (preStart eslesmesi)
+        float[] vixSeries = series != null
+                ? NavSeries.parseRaw(prefs.getString("vix_series", null), series.preStart)
+                : null;
 
         // Widget'in ANA EKRANDAKI gercek olculeri - kullanici buyuttugunde
         // fazla yukseklik bos kalmasin diye bitmap ayni orana cizilir.
@@ -143,10 +147,12 @@ public class IBKRWidgetProvider extends AppWidgetProvider {
         if (navText != null && changeText != null) {
             gauge = GaugeDrawer.draw(bmpW, gaugeH, chartH, navText, changeText,
                     pctChange, vixValue, trendArrow, trendColor, totalReturnPct,
-                    hasSideData ? sidePcts : null, sideLogos, vixChangePct, series, prevCloseNav);
+                    hasSideData ? sidePcts : null, sideLogos, vixChangePct,
+                    series, prevCloseNav, vixSeries);
         } else {
             gauge = GaugeDrawer.draw(bmpW, gaugeH, chartH, "$---,---", "app'i ac",
-                    0f, 20f, "▸", 0xFF64748B, Float.NaN, null, sideLogos, 0f, series, prevCloseNav);
+                    0f, 20f, "▸", 0xFF64748B, Float.NaN, null, sideLogos, 0f,
+                    series, prevCloseNav, vixSeries);
         }
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);

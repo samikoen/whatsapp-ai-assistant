@@ -32,6 +32,8 @@ public class SessionChartDrawer {
     private static final int COL_TIME = 0xFF7C8CA3;
     private static final int COL_HILO      = 0x9AFBBF24;  // gun ici min/max cizgileri
     private static final int COL_HILO_TEXT = 0xFFFBBF24;
+    private static final int COL_VIX       = 0x8A60A5FA;  // sonuk mavi VIX overlay
+    private static final int COL_VIX_TEXT  = 0xB093C5FD;
 
     /** Yuzde ekseninde en dar aralik (duz cizgi gurultu gibi gorunmesin). */
     private static final float MIN_SPAN_PCT = 0.30f;
@@ -39,9 +41,10 @@ public class SessionChartDrawer {
     /**
      * @param prevCloseNav dunku kapanis NAV'i - min/max etiketlerini $ olarak
      *                     yazmak icin. NaN ise yuzde yazilir.
+     * @param vix          NAV ile ayni izgarada VIX serisi (null = cizilmez)
      */
     static void draw(Canvas canvas, float x, float y, float w, float h,
-                     NavSeries.Data d, float prevCloseNav) {
+                     NavSeries.Data d, float prevCloseNav, float[] vix) {
         if (d == null || d.pct == null || d.lastIdx <= d.firstIdx) return;
 
         // Yazi olculeri GENISLIGE bagli - widget dikey buyutulunce yazilar
@@ -119,6 +122,11 @@ public class SessionChartDrawer {
         basePaint.setStrokeWidth(Math.max(1f, unit * 0.06f));
         basePaint.setPathEffect(new DashPathEffect(new float[]{unit * 0.17f, unit * 0.21f}, 0));
         canvas.drawLine(plotL, baseY, plotR, baseY, basePaint);
+
+        // ---- 5b) VIX overlay (NAV'in ALTINDA cizilir - geri planda kalsin) ----
+        if (vix != null) {
+            drawVixOverlay(canvas, vix, d.pct.length, plotL, plotT, plotW, plotH, unit);
+        }
 
         // ---- 6) NAV egrisi ----
         float lastPct = d.pct[d.lastIdx];
@@ -213,6 +221,67 @@ public class SessionChartDrawer {
         canvas.drawText(fmt.format(new Date(d.regEnd * 1000L)), xEnd, timeY, timePaint);
         timePaint.setTextAlign(Paint.Align.RIGHT);
         canvas.drawText(fmt.format(new Date(d.postEnd * 1000L)), plotR, timeY, timePaint);
+    }
+
+    /**
+     * VIX'i sonuk ince mavi cizgi olarak cizer.
+     *
+     * VIX (~16-25) ile NAV yuzdesi (~±0.5) ayni eksende gosterilemez; bu yuzden
+     * VIX KENDI gun ici min/max araligina gore olceklenir. Cizgi VIX'in YONUNU
+     * ve SEKLINI gosterir, dikey konumu NAV ile kiyaslanabilir degildir.
+     */
+    private static void drawVixOverlay(Canvas canvas, float[] vix, int nPts,
+                                       float plotL, float plotT, float plotW, float plotH,
+                                       float unit) {
+        float vMin = Float.MAX_VALUE, vMax = -Float.MAX_VALUE;
+        for (float v : vix) {
+            if (Float.isNaN(v)) continue;
+            if (v < vMin) vMin = v;
+            if (v > vMax) vMax = v;
+        }
+        if (vMin > vMax) return;
+
+        float rng = vMax - vMin;
+        if (rng < 0.02f) { vMin -= 0.5f; vMax += 0.5f; rng = vMax - vMin; }
+
+        // Plot alaninin %88'ini kullan, ust/alt %6 pay birak
+        float top = plotT + plotH * 0.06f;
+        float usable = plotH * 0.88f;
+
+        Path path = new Path();
+        boolean started = false;
+        float firstX = 0, firstY = 0;
+        for (int i = 0; i < vix.length && i < nPts; i++) {
+            float v = vix[i];
+            if (Float.isNaN(v)) continue;
+            float px = plotL + plotW * (i / (float) (nPts - 1));
+            float py = top + usable * (1f - (v - vMin) / rng);
+            if (!started) {
+                path.moveTo(px, py);
+                started = true;
+                firstX = px; firstY = py;
+            } else {
+                path.lineTo(px, py);   // kucuk bosluklar kopruleriyle gecilir
+            }
+        }
+        if (!started) return;
+
+        Paint vp = new Paint(Paint.ANTI_ALIAS_FLAG);
+        vp.setStyle(Paint.Style.STROKE);
+        vp.setColor(COL_VIX);
+        vp.setStrokeWidth(Math.max(1f, unit * 0.065f));
+        vp.setStrokeJoin(Paint.Join.ROUND);
+        vp.setStrokeCap(Paint.Cap.ROUND);
+        canvas.drawPath(path, vp);
+
+        // Kucuk "VIX" etiketi - cizginin baslangicinda
+        Paint lp = new Paint(Paint.ANTI_ALIAS_FLAG);
+        lp.setColor(COL_VIX_TEXT);
+        lp.setTextSize(unit * 0.50f);
+        lp.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        lp.setTextAlign(Paint.Align.LEFT);
+        lp.setShadowLayer(2, 1, 1, 0xC0000000);
+        canvas.drawText("VIX", firstX + unit * 0.18f, firstY - unit * 0.24f, lp);
     }
 
     /** Baseline biliniyorsa NAV'i $ olarak, bilinmiyorsa yuzde olarak yazar. */

@@ -581,6 +581,13 @@ public class PortfolioService extends Service {
                     editor.putString("nav_series", series);
                     // Grafikteki min/max cizgilerini $ olarak yazabilmek icin baseline
                     editor.putFloat("prev_close_nav", (float) prevCloseNAV);
+
+                    // VIX overlay - NAV ile ayni kova izgarasinda
+                    long[] bounds = NavSeries.sessionBounds(allResults, symbols);
+                    if (bounds != null && vixQ != null) {
+                        String vixSeries = NavSeries.buildRaw(vixQ, bounds[0], bounds[3]);
+                        if (vixSeries != null) editor.putString("vix_series", vixSeries);
+                    }
                 }
             }
 

@@ -40,20 +40,9 @@ public class NavSeries {
             if (allResults == null || prevCloseNAV <= 0) return null;
 
             // 1) Seans sinirlari - ilk saglikli sembolden
-            long preStart = 0, regStart = 0, regEnd = 0, postEnd = 0;
-            for (String sym : symbols) {
-                JSONObject q = allResults.optJSONObject(sym);
-                if (q == null) continue;
-                long ps = q.optLong("preStart", 0);
-                long rs = q.optLong("regStart", 0);
-                long re = q.optLong("regEnd", 0);
-                long pe = q.optLong("postEnd", 0);
-                if (ps > 0 && rs > ps && re > rs && pe > re) {
-                    preStart = ps; regStart = rs; regEnd = re; postEnd = pe;
-                    break;
-                }
-            }
-            if (postEnd == 0) return null;
+            long[] b4 = sessionBounds(allResults, symbols);
+            if (b4 == null) return null;
+            long preStart = b4[0], regStart = b4[1], regEnd = b4[2], postEnd = b4[3];
 
             double bucketSec = (double) (postEnd - preStart) / BUCKETS;
             if (bucketSec < 30) return null;
@@ -127,6 +116,96 @@ public class NavSeries {
             }
             return sb.toString();
 
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Seans sinirlari {preStart, regStart, regEnd, postEnd} - bulunamazsa null. */
+    static long[] sessionBounds(JSONObject allResults, String[] symbols) {
+        if (allResults == null) return null;
+        for (String sym : symbols) {
+            JSONObject q = allResults.optJSONObject(sym);
+            if (q == null) continue;
+            long ps = q.optLong("preStart", 0);
+            long rs = q.optLong("regStart", 0);
+            long re = q.optLong("regEnd", 0);
+            long pe = q.optLong("postEnd", 0);
+            if (ps > 0 && rs > ps && re > rs && pe > re) {
+                return new long[]{ ps, rs, re, pe };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Tek bir sembolun ham kapanis serisini NAV serisiyle AYNI kova izgarasina
+     * yerlestirir (VIX overlay icin). Bosluklar '~' kalir - cizerken atlanir.
+     * Cikti: "preStart;v0,v1,...,vN"
+     */
+    static String buildRaw(JSONObject q, long preStart, long postEnd) {
+        try {
+            if (q == null || postEnd <= preStart) return null;
+            double bucketSec = (double) (postEnd - preStart) / BUCKETS;
+            if (bucketSec < 30) return null;
+
+            JSONArray ts = q.optJSONArray("ts");
+            JSONArray cl = q.optJSONArray("cl");
+            if (ts == null || cl == null) return null;
+
+            float[] grid = new float[BUCKETS];
+            Arrays.fill(grid, Float.NaN);
+            boolean any = false;
+
+            int n = Math.min(ts.length(), cl.length());
+            for (int i = 0; i < n; i++) {
+                if (cl.isNull(i)) continue;
+                double v = cl.optDouble(i, 0);
+                if (v <= 0) continue;
+                int b = (int) ((ts.optLong(i, 0) - preStart) / bucketSec);
+                if (b < 0 || b >= BUCKETS) continue;
+                grid[b] = (float) v;
+                any = true;
+            }
+            if (!any) return null;
+
+            StringBuilder sb = new StringBuilder(1200);
+            sb.append(preStart).append(';');
+            for (int b = 0; b < BUCKETS; b++) {
+                if (b > 0) sb.append(',');
+                if (Float.isNaN(grid[b])) sb.append('~');
+                else sb.append(String.format(Locale.US, "%.2f", grid[b]));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * buildRaw ciktisini cozer. preStart eslesmiyorsa (onceki gunden kalma)
+     * null doner - yanlis gune ait cizgi cizilmesin.
+     */
+    static float[] parseRaw(String payload, long expectedPreStart) {
+        try {
+            if (payload == null) return null;
+            int sc = payload.indexOf(';');
+            if (sc <= 0) return null;
+            if (Long.parseLong(payload.substring(0, sc)) != expectedPreStart) return null;
+
+            String[] parts = payload.substring(sc + 1).split(",");
+            float[] out = new float[parts.length];
+            boolean any = false;
+            for (int i = 0; i < parts.length; i++) {
+                String p = parts[i];
+                if (p.isEmpty() || p.charAt(0) == '~') {
+                    out[i] = Float.NaN;
+                } else {
+                    out[i] = Float.parseFloat(p);
+                    any = true;
+                }
+            }
+            return any ? out : null;
         } catch (Exception e) {
             return null;
         }
