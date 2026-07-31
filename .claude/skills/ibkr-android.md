@@ -544,6 +544,18 @@ implementation 'androidx.webkit:webkit:1.8.0'
 
 ## Degisiklik Gecmisi
 
+### 31 Temmuz 2026 - Widget'a Gun Ici 3 Seansli NAV Grafigi
+- **Ne eklendi**: Gauge'un altina pre-market / regular / after-hours seanslarini tek 1 gunluk grafikte gosteren panel (IBKR Mobile ETH grafigi mantigi, ama tek sembol degil TOPLAM NAV).
+- **Ek network YOK**: Yahoo `interval=1m&range=1d&includePrePost=true` yaniti zaten cekiliyordu; `timestamp[]` + `close[]` dizileri simdiye kadar atiliyordu. Artik `parseYahooResponse()` bunlari `ts`/`cl` olarak dondurur.
+- **Seans sinirlari**: `meta.tradingPeriods` (veri gunune ait) oncelikli, yoksa `meta.currentTradingPeriod`. DST ve yarim gunler otomatik dogru - sabit saat KODLAMA.
+- **Yeni dosya `NavSeries.java`**: preStart->postEnd araligi 180 kovaya bolunur, her ticker'in dakikalik close'lari kovalara yazilir, forward-fill, kova basina NAV -> dunku kapanisa gore yuzde. Prefs'te tek satir: `nav_series = preStart;regStart;regEnd;postEnd;p0,...,p179` (`~` = veri yok).
+- **Yeni dosya `SessionChartDrawer.java`**: Seans bantlari (PRE mavi / MARKET yesil / AFTER mor), kesikli ayraclar, noktali baseline (dunku kapanis), dolgulu NAV egrisi, ucunda beyaz nokta + yuzde, altta yerel saatle 4 saat etiketi.
+- **KRITIK - tek bitmap**: Grafik gauge ile AYNI bitmap'e cizilir (ayri ImageView DEGIL). Iki buyuk bitmap RemoteViews boyut limitine takilir. `GaugeDrawer.draw()` artik `chartHeight` + `NavSeries.Data` alir, gauge olculeri `height` parametresine gore hesaplanmaya devam eder.
+- **KRITIK - prefs sismesi**: Ham `ts`/`cl` dizileri prefs'e yazilmamali. `stripSeries()` ile `underlying_data`'dan ayiklanir. Dogrulandi: prefs 2.8 KB.
+- **Widget boyutu**: `widget_info.xml` minHeight 200->250dp, targetCellHeight 2->3. Bitmap 380x200dp -> 380x304dp. Seri yoksa `chartH=0` -> eski gorunum (guvenli geri dusus).
+- **Etkilenen dosyalar**: `NavSeries.java` (yeni), `SessionChartDrawer.java` (yeni), `PortfolioService.java`, `GaugeDrawer.java`, `IBKRWidgetProvider.java`, `res/xml/widget_info.xml`
+- **Tasarim dokumani**: `docs/superpowers/specs/2026-07-31-ibkr-widget-session-chart-design.md`
+
 ### 10 Temmuz 2026 - Status Bar Cipinde Buyuk Rakamlar
 - **Sorun**: Status bar'daki yesil cip NAV'i "0.97" (milyon, 4 karakter) olarak 48px kare bitmap'e ciziyordu; rakamlar okunamayacak kadar kucuktu.
 - **Deneme 1 (basarisiz)**: Custom bitmap kaldirilip monokrom drawable (`ic_stat_nav.xml`) + `setShortCriticalText` denendi. dumpsys dogruladi: bildirim PROMOTED_ONGOING ve shortCriticalText="968" sisteme gidiyor, AMA One UI 8.x ucuncu parti chip'te sistem metnini CIZMIYOR (sadece ikon basiliyor). Yani Samsung'da "gercek metin" yolu kapali.

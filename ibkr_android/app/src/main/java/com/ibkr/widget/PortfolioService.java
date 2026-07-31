@@ -359,10 +359,80 @@ public class PortfolioService extends Service {
             result.put("pctChange", pctChange);
             result.put("hourTrend", hourTrend);
             result.put("marketState", marketState);
+
+            // Gun ici NAV grafigi icin ham seri + seans sinirlari (NavSeries kullanir)
+            try {
+                JSONArray timestamps = r.optJSONArray("timestamp");
+                if (timestamps != null && closes.length() > 0) {
+                    result.put("ts", timestamps);
+                    result.put("cl", closes);
+                }
+                putSessionBounds(result, meta);
+            } catch (Exception e) { /* grafik olmadan devam */ }
+
             return result;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Pre/regular/post seans sinirlarini epoch saniye olarak result'a yazar.
+     * Once `tradingPeriods` (veri gunune ait) denenir, yoksa `currentTradingPeriod`.
+     */
+    private void putSessionBounds(JSONObject result, JSONObject meta) {
+        try {
+            JSONObject tp = meta.optJSONObject("tradingPeriods");
+            if (tp != null) {
+                JSONObject pre = firstPeriod(tp.optJSONArray("pre"));
+                JSONObject reg = firstPeriod(tp.optJSONArray("regular"));
+                JSONObject post = firstPeriod(tp.optJSONArray("post"));
+                if (pre != null && reg != null && post != null) {
+                    result.put("preStart", pre.optLong("start", 0));
+                    result.put("regStart", reg.optLong("start", 0));
+                    result.put("regEnd", reg.optLong("end", 0));
+                    result.put("postEnd", post.optLong("end", 0));
+                    return;
+                }
+            }
+            JSONObject ctp = meta.optJSONObject("currentTradingPeriod");
+            if (ctp != null) {
+                JSONObject pre = ctp.optJSONObject("pre");
+                JSONObject reg = ctp.optJSONObject("regular");
+                JSONObject post = ctp.optJSONObject("post");
+                if (pre != null && reg != null && post != null) {
+                    result.put("preStart", pre.optLong("start", 0));
+                    result.put("regStart", reg.optLong("start", 0));
+                    result.put("regEnd", reg.optLong("end", 0));
+                    result.put("postEnd", post.optLong("end", 0));
+                }
+            }
+        } catch (Exception e) { /* sinir yoksa grafik cizilmez */ }
+    }
+
+    /** Ham zaman serisi alanlarini atarak sadece skaler degerleri kopyalar. */
+    private JSONObject stripSeries(JSONObject q) {
+        try {
+            JSONObject out = new JSONObject();
+            String[] keys = { "price", "prevClose", "change", "pctChange", "hourTrend", "marketState" };
+            for (String k : keys) {
+                if (q.has(k)) out.put(k, q.get(k));
+            }
+            return out;
+        } catch (Exception e) {
+            return q;
+        }
+    }
+
+    /** tradingPeriods dizileri [[{...}]] seklinde ic ice gelir. */
+    private JSONObject firstPeriod(JSONArray arr) {
+        if (arr == null || arr.length() == 0) return null;
+        Object first = arr.opt(0);
+        if (first instanceof JSONArray) {
+            JSONArray inner = (JSONArray) first;
+            return inner.length() > 0 ? inner.optJSONObject(0) : null;
+        }
+        return arr.optJSONObject(0);
     }
 
     // ==================== NAV Hesaplama + Bildirim ====================
@@ -504,12 +574,19 @@ public class PortfolioService extends Service {
                 .putString("symbol_pcts", MainActivity.buildSymbolPctJson(allResults))
                 .putLong("timestamp", System.currentTimeMillis());
 
+            // Gun ici NAV serisi (widget grafigi) - basarisiz olursa onceki seri kalir
+            if (prevCloseValid) {
+                String series = NavSeries.build(allResults, symbols, tickers, cash, prevCloseNAV);
+                if (series != null) editor.putString("nav_series", series);
+            }
+
             // Underlying asset verileri (JSON olarak sakla)
+            // NOT: ham "ts"/"cl" dizileri haric tutulur - prefs'i sisirmesin.
             try {
                 JSONObject underlyingData = new JSONObject();
-                if (btcQ != null) underlyingData.put("BTC-USD", btcQ);
-                if (goldQ != null) underlyingData.put("GC=F", goldQ);
-                if (nqQ != null) underlyingData.put("NQ=F", nqQ);
+                if (btcQ != null) underlyingData.put("BTC-USD", stripSeries(btcQ));
+                if (goldQ != null) underlyingData.put("GC=F", stripSeries(goldQ));
+                if (nqQ != null) underlyingData.put("NQ=F", stripSeries(nqQ));
                 editor.putString("underlying_data", underlyingData.toString());
             } catch (Exception e) { /* ignore */ }
 
