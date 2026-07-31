@@ -2,8 +2,10 @@ package com.ibkr.widget;
 
 import android.graphics.Canvas;
 import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 
 import java.text.SimpleDateFormat;
@@ -30,8 +32,10 @@ public class SessionChartDrawer {
     private static final int COL_SEP  = 0x70475569;
     private static final int COL_BASE = 0xA0647488;
     private static final int COL_TIME = 0xFF7C8CA3;
-    private static final int COL_HILO      = 0x9AFBBF24;  // gun ici min/max cizgileri
-    private static final int COL_HILO_TEXT = 0xFFFBBF24;
+    // Gun ici min/max: NOTR gri. NAV cizgisi gauge skalasini kullandigi icin
+    // cogu gun sari tonlarda kaliyor - amber olsalardi birbirine karisirlardi.
+    private static final int COL_HILO      = 0xA0A8B4C4;
+    private static final int COL_HILO_TEXT = 0xFFE2E8F0;
     private static final int COL_VIX       = 0x8A60A5FA;  // sonuk mavi VIX overlay
     private static final int COL_VIX_TEXT  = 0xB093C5FD;
 
@@ -128,40 +132,62 @@ public class SessionChartDrawer {
             drawVixOverlay(canvas, vix, d.pct.length, plotL, plotT, plotW, plotH, unit);
         }
 
-        // ---- 6) NAV egrisi ----
-        float lastPct = d.pct[d.lastIdx];
-        int lineColor = lastPct >= 0 ? COL_UP : COL_DOWN;
+        // ---- 6) NAV egrisi - her nokta gauge ibresinin o degerdeki rengiyle ----
+        int nPts = d.pct.length;
+
+        int valid = 0;
+        for (int i = d.firstIdx; i <= d.lastIdx; i++) {
+            if (!Float.isNaN(d.pct[i])) valid++;
+        }
+        if (valid < 2) return;
 
         Path line = new Path();
-        int nPts = d.pct.length;
-        float lastX = plotL, lastY = baseY;
-        boolean started = false;
+        int[] lineColors = new int[valid];
+        int[] fillColors = new int[valid];
+        float[] xs = new float[valid];
+        float startX = 0, lastX = 0, lastY = baseY;
+        int k = 0;
         for (int i = d.firstIdx; i <= d.lastIdx; i++) {
             float v = d.pct[i];
             if (Float.isNaN(v)) continue;
             float px = plotL + plotW * (i / (float) (nPts - 1));
             float py = pctToY(v, lo, hi, plotT, plotH);
-            if (!started) { line.moveTo(px, py); started = true; }
+            if (k == 0) { line.moveTo(px, py); startX = px; }
             else line.lineTo(px, py);
+
+            int c = GaugeDrawer.colorForPct(v);   // ibre ile ayni skala
+            lineColors[k] = c;
+            fillColors[k] = (c & 0x00FFFFFF) | 0x3C000000;
+            xs[k] = px;
+            k++;
             lastX = px; lastY = py;
         }
-        if (!started) return;
+
+        // Yatay renk gecisi: her x'teki renk o andaki NAV yuzdesine karsilik gelir
+        float gradSpan = Math.max(1f, lastX - startX);
+        float[] stops = new float[valid];
+        for (int j = 0; j < valid; j++) {
+            stops[j] = Math.min(1f, Math.max(0f, (xs[j] - startX) / gradSpan));
+        }
+        LinearGradient lineShader = new LinearGradient(startX, 0, lastX, 0,
+                lineColors, stops, Shader.TileMode.CLAMP);
+        LinearGradient fillShader = new LinearGradient(startX, 0, lastX, 0,
+                fillColors, stops, Shader.TileMode.CLAMP);
 
         // Dolgu (egri ile baseline arasi)
-        float startX = plotL + plotW * (d.firstIdx / (float) (nPts - 1));
         Path fill = new Path(line);
         fill.lineTo(lastX, baseY);
         fill.lineTo(startX, baseY);
         fill.close();
         Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         fillPaint.setStyle(Paint.Style.FILL);
-        fillPaint.setColor((lineColor & 0x00FFFFFF) | 0x38000000);
+        fillPaint.setShader(fillShader);
         canvas.drawPath(fill, fillPaint);
 
         // Cizgi
         Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         linePaint.setStyle(Paint.Style.STROKE);
-        linePaint.setColor(lineColor);
+        linePaint.setShader(lineShader);
         linePaint.setStrokeWidth(Math.max(1.8f, unit * 0.15f));
         linePaint.setStrokeJoin(Paint.Join.ROUND);
         linePaint.setStrokeCap(Paint.Cap.ROUND);

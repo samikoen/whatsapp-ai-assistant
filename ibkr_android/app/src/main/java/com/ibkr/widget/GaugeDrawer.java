@@ -122,10 +122,7 @@ public class GaugeDrawer {
         }
 
         // 8. Ibre pozisyonundaki arc rengi (text'ler icin)
-        float clampedPct = Math.max(-MAX_PCT, Math.min(MAX_PCT, pctChange));
-        float needleAngle = 270f + (clampedPct / MAX_PCT) * (ARC_SWEEP / 2f);
-        float needleT = (needleAngle - ARC_START) / ARC_SWEEP;
-        int needleArcColor = multiStopColor(ARC_COLORS, ARC_STOPS, needleT);
+        int needleArcColor = colorForPct(pctChange);
 
         // 9. NAV text (beyaz)
         Paint navPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -320,6 +317,21 @@ public class GaugeDrawer {
         tipPaint.setColor(accentColor);
         tipPaint.setStyle(Paint.Style.FILL);
         canvas.drawCircle(tipX, tipY, 3f, tipPaint);
+    }
+
+    /**
+     * Bir gunluk yuzdenin gauge yayindaki rengi.
+     *
+     * Ibre ile BIREBIR ayni skalayi kullanir (±MAX_PCT = ±%4). Seans grafigi de
+     * bunu cagirir - widget'ta tek renk dili olsun diye tek kaynak burasi.
+     * NOT: ±%0.4 araligi duz sari; tipik gunlerde cizgi agirlikli sari cikar
+     * (kullanici bunu bilerek sectiyi - 1 Agu 2026).
+     */
+    public static int colorForPct(float pctChange) {
+        float clamped = Math.max(-MAX_PCT, Math.min(MAX_PCT, pctChange));
+        float angle = 270f + (clamped / MAX_PCT) * (ARC_SWEEP / 2f);
+        float t = (angle - ARC_START) / ARC_SWEEP;
+        return multiStopColor(ARC_COLORS, ARC_STOPS, t);
     }
 
     private static int multiStopColor(int[] colors, float[] stops, float t) {
