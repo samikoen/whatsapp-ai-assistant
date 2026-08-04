@@ -328,6 +328,17 @@ public class PortfolioService extends Service {
 
             if (currentPrice <= 0 || prevClose <= 0) return null;
 
+            // GRAFIK baseline'i - prevClose ile AYNI SEY DEGIL.
+            // prevClose "su anki/yaklasan gunun" referansi: borsa tamamen
+            // kapaninca (CLOSED) bugunun kapanisina kayar ki sabah gauge dogru
+            // gunu gostersin. Ama grafik hala DUNU cizdigi icin ayni degeri
+            // kullanirsa gun kendi kapanisiyla olculur ve tamami kirmiziya
+            // doner (4 Agu 2026 bugu). Grafigin referansi her zaman cizilen
+            // gunden ONCEKI kapanis = chartPreviousClose.
+            double chartPrevClose = meta.optDouble("chartPreviousClose",
+                    meta.optDouble("previousClose", 0));
+            if (chartPrevClose <= 0) chartPrevClose = prevClose;
+
             int hourTrend = 0;
             if (closes.length() > 10) {
                 int latestIdx = -1;
@@ -359,6 +370,7 @@ public class PortfolioService extends Service {
             result.put("pctChange", pctChange);
             result.put("hourTrend", hourTrend);
             result.put("marketState", marketState);
+            result.put("chartPrevClose", chartPrevClose);
 
             // Gun ici NAV grafigi icin ham seri + seans sinirlari (NavSeries kullanir)
             try {
@@ -574,13 +586,27 @@ public class PortfolioService extends Service {
                 .putString("symbol_pcts", MainActivity.buildSymbolPctJson(allResults))
                 .putLong("timestamp", System.currentTimeMillis());
 
+            // Grafik baseline'i: cizilen gunden ONCEKI kapanisa gore NAV.
+            // Gauge'un prevCloseNAV'indan AYRI - bkz. parseYahooResponse/chartPrevClose.
+            double chartBaselineNAV = cash;
+            for (int i = 0; i < symbols.length; i++) {
+                JSONObject q = allResults.optJSONObject(symbols[i]);
+                double cpc = 0;
+                if (q != null) {
+                    cpc = q.optDouble("chartPrevClose", 0);
+                    if (cpc <= 0) cpc = q.optDouble("prevClose", 0);
+                }
+                if (cpc <= 0) cpc = tickers[i][1];
+                chartBaselineNAV += tickers[i][0] * cpc;
+            }
+
             // Gun ici NAV serisi (widget grafigi) - basarisiz olursa onceki seri kalir
-            if (prevCloseValid) {
-                String series = NavSeries.build(allResults, symbols, tickers, cash, prevCloseNAV);
+            if (chartBaselineNAV > 0) {
+                String series = NavSeries.build(allResults, symbols, tickers, cash, chartBaselineNAV);
                 if (series != null) {
                     editor.putString("nav_series", series);
                     // Grafikteki min/max cizgilerini $ olarak yazabilmek icin baseline
-                    editor.putFloat("prev_close_nav", (float) prevCloseNAV);
+                    editor.putFloat("prev_close_nav", (float) chartBaselineNAV);
 
                     // VIX overlay - NAV ile ayni kova izgarasinda
                     long[] bounds = NavSeries.sessionBounds(allResults, symbols);

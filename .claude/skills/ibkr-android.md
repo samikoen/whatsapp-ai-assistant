@@ -544,6 +544,15 @@ implementation 'androidx.webkit:webkit:1.8.0'
 
 ## Degisiklik Gecmisi
 
+### 4 Agustos 2026 - Grafik Baseline'i Gauge'dan Ayrildi (KRITIK BUG FIX)
+- **Belirti**: Borsa tamamen kapandiktan sonra (CLOSED, TR 03:00-11:00 arasi) yukselisle kapanan bir gunun grafigi tamamen KIRMIZIYA donuyordu.
+- **Kok neden**: `parseYahooResponse` CLOSED/PRE durumda `prevClose = regularMarketPrice` yapiyor (25 Sub 2026 karari - sabah gauge dogru gunu gostersin diye DOGRU). Ama grafik hala ONCEKI gunu ciziyor; ayni degeri baseline alinca gun KENDI kapanisiyla olculuyor -> tum gun referansin altinda -> kirmizi.
+- **Kanit (4 Agu 09:00 TR, NVDA)**: grafik verisi 3 Agu; `regularMarketPrice`=206.64 (Pzt kapanis), `chartPreviousClose`=200.75 (Cuma kapanis). Hatali baseline NAV 965,668 = prefs'teki degerle BIREBIR; dogru baseline 946,582.
+- **Cozum**: `prevClose` (gauge/bildirim) AYNEN KALDI. Grafik icin ayri `chartPrevClose` alani eklendi (`meta.chartPreviousClose`, fallback `previousClose`). `computeAndNotify` ayri `chartBaselineNAV = cash + Σ qty*chartPrevClose` hesaplar; `NavSeries.build()` ve `prev_close_nav` bunu kullanir.
+- **KURAL**: `prevClose` ile grafik baseline'i AYNI SEY DEGIL, bir daha birlestirme. prevClose = "su anki/yaklasan gunun" referansi; grafik baseline = "cizilen gunden onceki kapanis". REGULAR/POST/PRE'de ikisi ayni deger, sadece CLOSED penceresinde ayrisir.
+- **Dogrulama**: Fix sonrasi `prev_close_nav = 946581.75` (tahmin 946,582), grafik yesile dondu (ekran goruntusu).
+- **Etkilenen dosya**: `PortfolioService.java`
+
 ### 31 Temmuz 2026 - Widget'a Gun Ici 3 Seansli NAV Grafigi
 - **Ne eklendi**: Gauge'un altina pre-market / regular / after-hours seanslarini tek 1 gunluk grafikte gosteren panel (IBKR Mobile ETH grafigi mantigi, ama tek sembol degil TOPLAM NAV).
 - **Ek network YOK**: Yahoo `interval=1m&range=1d&includePrePost=true` yaniti zaten cekiliyordu; `timestamp[]` + `close[]` dizileri simdiye kadar atiliyordu. Artik `parseYahooResponse()` bunlari `ts`/`cl` olarak dondurur.
