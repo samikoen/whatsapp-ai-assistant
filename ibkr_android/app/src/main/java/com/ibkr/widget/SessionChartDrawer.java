@@ -1,0 +1,327 @@
+package com.ibkr.widget;
+
+import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Shader;
+import android.graphics.Typeface;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+/**
+ * Gun ici NAV grafigini uc seans bandi halinde cizer:
+ * PRE (pre-market) | MARKET (regular) | AFTER (after-hours).
+ *
+ * Verilen canvas bolgesine cizer - gauge ile ayni bitmap'i paylasir
+ * (RemoteViews bitmap boyut limitine takilmamak icin tek bitmap kullaniliyor).
+ */
+public class SessionChartDrawer {
+
+    private static final int BAND_PRE = 0x1A3B82F6;
+    private static final int BAND_REG = 0x1410B981;
+    private static final int BAND_AFT = 0x1A8B5CF6;
+    private static final int LBL_PRE  = 0xFF60A5FA;
+    private static final int LBL_REG  = 0xFF34D399;
+    private static final int LBL_AFT  = 0xFFA78BFA;
+    private static final int COL_UP   = 0xFF10B981;
+    private static final int COL_DOWN = 0xFFEF4444;
+    private static final int COL_SEP  = 0x70475569;
+    private static final int COL_BASE = 0xA0647488;
+    private static final int COL_TIME = 0xFF7C8CA3;
+    // Gun ici min/max: NOTR gri. NAV cizgisi gauge skalasini kullandigi icin
+    // cogu gun sari tonlarda kaliyor - amber olsalardi birbirine karisirlardi.
+    private static final int COL_HILO      = 0xA0A8B4C4;
+    private static final int COL_HILO_TEXT = 0xFFE2E8F0;
+    private static final int COL_VIX       = 0x8A60A5FA;  // sonuk mavi VIX overlay
+    private static final int COL_VIX_TEXT  = 0xB093C5FD;
+
+    /** Yuzde ekseninde en dar aralik (duz cizgi gurultu gibi gorunmesin). */
+    private static final float MIN_SPAN_PCT = 0.30f;
+
+    /**
+     * @param prevCloseNav dunku kapanis NAV'i - min/max etiketlerini $ olarak
+     *                     yazmak icin. NaN ise yuzde yazilir.
+     * @param vix          NAV ile ayni izgarada VIX serisi (null = cizilmez)
+     */
+    static void draw(Canvas canvas, float x, float y, float w, float h,
+                     NavSeries.Data d, float prevCloseNav, float[] vix) {
+        if (d == null || d.pct == null || d.lastIdx <= d.firstIdx) return;
+
+        // Yazi olculeri GENISLIGE bagli - widget dikey buyutulunce yazilar
+        // orantisiz sismesin (grafik alani buyur, tipografi sabit kalir).
+        float unit   = Math.min(w * 0.050f, h * 0.24f);
+        float labelH = unit * 1.30f;
+        float timeH  = unit * 1.20f;
+        float plotL  = x + w * 0.015f;
+        float plotR  = x + w * 0.985f;
+        float plotT  = y + labelH;
+        float plotB  = y + h - timeH;
+        float plotW  = plotR - plotL;
+        float plotH  = plotB - plotT;
+        if (plotW <= 0 || plotH <= 0) return;
+
+        long span = d.postEnd - d.preStart;
+        float xReg = plotL + plotW * ((float) (d.regStart - d.preStart) / span);
+        float xEnd = plotL + plotW * ((float) (d.regEnd   - d.preStart) / span);
+
+        // ---- 1) Seans bantlari ----
+        Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
+        band.setStyle(Paint.Style.FILL);
+        band.setColor(BAND_PRE);
+        canvas.drawRect(plotL, plotT, xReg, plotB, band);
+        band.setColor(BAND_REG);
+        canvas.drawRect(xReg, plotT, xEnd, plotB, band);
+        band.setColor(BAND_AFT);
+        canvas.drawRect(xEnd, plotT, plotR, plotB, band);
+
+        // ---- 2) Seans ayiriclari ----
+        Paint sep = new Paint(Paint.ANTI_ALIAS_FLAG);
+        sep.setStyle(Paint.Style.STROKE);
+        sep.setColor(COL_SEP);
+        sep.setStrokeWidth(Math.max(1.2f, unit * 0.07f));
+        sep.setPathEffect(new DashPathEffect(new float[]{unit * 0.36f, unit * 0.27f}, 0));
+        canvas.drawLine(xReg, plotT, xReg, plotB, sep);
+        canvas.drawLine(xEnd, plotT, xEnd, plotB, sep);
+
+        // ---- 3) Seans basliklari ----
+        Paint lbl = new Paint(Paint.ANTI_ALIAS_FLAG);
+        lbl.setTextAlign(Paint.Align.CENTER);
+        lbl.setTextSize(unit * 0.82f);
+        lbl.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        lbl.setShadowLayer(2, 1, 1, 0xCC000000);
+        float lblY = y + labelH * 0.80f;
+        lbl.setColor(LBL_PRE);
+        canvas.drawText("PRE", (plotL + xReg) / 2f, lblY, lbl);
+        lbl.setColor(LBL_REG);
+        canvas.drawText("MARKET", (xReg + xEnd) / 2f, lblY, lbl);
+        lbl.setColor(LBL_AFT);
+        canvas.drawText("AFTER", (xEnd + plotR) / 2f, lblY, lbl);
+
+        // ---- 4) Y ekseni araligi (0 = dunku kapanis her zaman icinde) ----
+        float dataMin = Float.MAX_VALUE, dataMax = -Float.MAX_VALUE;
+        for (int i = d.firstIdx; i <= d.lastIdx; i++) {
+            float v = d.pct[i];
+            if (Float.isNaN(v)) continue;
+            if (v < dataMin) dataMin = v;
+            if (v > dataMax) dataMax = v;
+        }
+        if (dataMin > dataMax) return;
+
+        float min = Math.min(0f, dataMin);
+        float max = Math.max(0f, dataMax);
+        float mid = (min + max) / 2f;
+        float half = Math.max((max - min) / 2f, MIN_SPAN_PCT / 2f);
+        half *= 1.34f;                 // ust/alt nefes payi (min/max etiketleri sigsin)
+        float lo = mid - half, hi = mid + half;
+
+        // ---- 5) Baseline (dunku kapanis) ----
+        float baseY = pctToY(0f, lo, hi, plotT, plotH);
+        Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        basePaint.setStyle(Paint.Style.STROKE);
+        basePaint.setColor(COL_BASE);
+        basePaint.setStrokeWidth(Math.max(1f, unit * 0.06f));
+        basePaint.setPathEffect(new DashPathEffect(new float[]{unit * 0.17f, unit * 0.21f}, 0));
+        canvas.drawLine(plotL, baseY, plotR, baseY, basePaint);
+
+        // ---- 5b) VIX overlay (NAV'in ALTINDA cizilir - geri planda kalsin) ----
+        if (vix != null) {
+            drawVixOverlay(canvas, vix, d.pct.length, plotL, plotT, plotW, plotH, unit);
+        }
+
+        // ---- 6) NAV egrisi - her nokta gauge ibresinin o degerdeki rengiyle ----
+        int nPts = d.pct.length;
+
+        int valid = 0;
+        for (int i = d.firstIdx; i <= d.lastIdx; i++) {
+            if (!Float.isNaN(d.pct[i])) valid++;
+        }
+        if (valid < 2) return;
+
+        Path line = new Path();
+        int[] lineColors = new int[valid];
+        int[] fillColors = new int[valid];
+        float[] xs = new float[valid];
+        float startX = 0, lastX = 0, lastY = baseY;
+        int k = 0;
+        for (int i = d.firstIdx; i <= d.lastIdx; i++) {
+            float v = d.pct[i];
+            if (Float.isNaN(v)) continue;
+            float px = plotL + plotW * (i / (float) (nPts - 1));
+            float py = pctToY(v, lo, hi, plotT, plotH);
+            if (k == 0) { line.moveTo(px, py); startX = px; }
+            else line.lineTo(px, py);
+
+            int c = GaugeDrawer.colorForPct(v);   // ibre ile ayni skala
+            lineColors[k] = c;
+            fillColors[k] = (c & 0x00FFFFFF) | 0x3C000000;
+            xs[k] = px;
+            k++;
+            lastX = px; lastY = py;
+        }
+
+        // Yatay renk gecisi: her x'teki renk o andaki NAV yuzdesine karsilik gelir
+        float gradSpan = Math.max(1f, lastX - startX);
+        float[] stops = new float[valid];
+        for (int j = 0; j < valid; j++) {
+            stops[j] = Math.min(1f, Math.max(0f, (xs[j] - startX) / gradSpan));
+        }
+        LinearGradient lineShader = new LinearGradient(startX, 0, lastX, 0,
+                lineColors, stops, Shader.TileMode.CLAMP);
+        LinearGradient fillShader = new LinearGradient(startX, 0, lastX, 0,
+                fillColors, stops, Shader.TileMode.CLAMP);
+
+        // Dolgu (egri ile baseline arasi)
+        Path fill = new Path(line);
+        fill.lineTo(lastX, baseY);
+        fill.lineTo(startX, baseY);
+        fill.close();
+        Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        fillPaint.setStyle(Paint.Style.FILL);
+        fillPaint.setShader(fillShader);
+        canvas.drawPath(fill, fillPaint);
+
+        // Cizgi
+        Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        linePaint.setStyle(Paint.Style.STROKE);
+        linePaint.setShader(lineShader);
+        linePaint.setStrokeWidth(Math.max(1.8f, unit * 0.15f));
+        linePaint.setStrokeJoin(Paint.Join.ROUND);
+        linePaint.setStrokeCap(Paint.Cap.ROUND);
+        canvas.drawPath(line, linePaint);
+
+        // ---- 7) Gun ici en yuksek / en dusuk cizgileri ----
+        float yHigh = pctToY(dataMax, lo, hi, plotT, plotH);
+        float yLow  = pctToY(dataMin, lo, hi, plotT, plotH);
+
+        Paint hiloPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        hiloPaint.setStyle(Paint.Style.STROKE);
+        hiloPaint.setColor(COL_HILO);
+        hiloPaint.setStrokeWidth(Math.max(1f, unit * 0.055f));
+        hiloPaint.setPathEffect(new DashPathEffect(new float[]{unit * 0.42f, unit * 0.30f}, 0));
+
+        Paint hiloText = new Paint(Paint.ANTI_ALIAS_FLAG);
+        hiloText.setColor(COL_HILO_TEXT);
+        hiloText.setTextSize(unit * 0.70f);
+        hiloText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        hiloText.setTextAlign(Paint.Align.RIGHT);
+        hiloText.setShadowLayer(3, 1, 1, 0xE0000000);
+        float textR = plotR - unit * 0.25f;
+
+        canvas.drawLine(plotL, yHigh, plotR, yHigh, hiloPaint);
+        // Ustte yer varsa cizginin ustune, yoksa altina yaz
+        float highLabelY = (yHigh - unit * 1.00f >= plotT)
+                ? yHigh - unit * 0.28f : yHigh + unit * 0.86f;
+        canvas.drawText(formatLevel(dataMax, prevCloseNav), textR, highLabelY, hiloText);
+
+        // Cok dar aralikta iki etiket ust uste binmesin
+        if (yLow - yHigh > unit * 1.9f) {
+            canvas.drawLine(plotL, yLow, plotR, yLow, hiloPaint);
+            float lowLabelY = (yLow + unit * 0.95f <= plotB)
+                    ? yLow + unit * 0.86f : yLow - unit * 0.28f;
+            canvas.drawText(formatLevel(dataMin, prevCloseNav), textR, lowLabelY, hiloText);
+        }
+
+        // ---- 8) Guncel nokta ----
+        Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dot.setStyle(Paint.Style.FILL);
+        dot.setColor(0xFFFFFFFF);
+        float dotR = Math.max(2.5f, unit * 0.20f);
+        canvas.drawCircle(lastX, lastY, dotR, dot);
+
+        // ---- 9) Saat etiketleri (telefonun yerel saati) ----
+        Paint timePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        timePaint.setColor(COL_TIME);
+        timePaint.setTextSize(unit * 0.70f);
+        timePaint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        float timeY = plotB + timeH * 0.78f;
+        SimpleDateFormat fmt = new SimpleDateFormat("HH:mm", Locale.US);
+
+        timePaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(fmt.format(new Date(d.preStart * 1000L)), plotL, timeY, timePaint);
+        timePaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText(fmt.format(new Date(d.regStart * 1000L)), xReg, timeY, timePaint);
+        canvas.drawText(fmt.format(new Date(d.regEnd * 1000L)), xEnd, timeY, timePaint);
+        timePaint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText(fmt.format(new Date(d.postEnd * 1000L)), plotR, timeY, timePaint);
+    }
+
+    /**
+     * VIX'i sonuk ince mavi cizgi olarak cizer.
+     *
+     * VIX (~16-25) ile NAV yuzdesi (~±0.5) ayni eksende gosterilemez; bu yuzden
+     * VIX KENDI gun ici min/max araligina gore olceklenir. Cizgi VIX'in YONUNU
+     * ve SEKLINI gosterir, dikey konumu NAV ile kiyaslanabilir degildir.
+     */
+    private static void drawVixOverlay(Canvas canvas, float[] vix, int nPts,
+                                       float plotL, float plotT, float plotW, float plotH,
+                                       float unit) {
+        float vMin = Float.MAX_VALUE, vMax = -Float.MAX_VALUE;
+        for (float v : vix) {
+            if (Float.isNaN(v)) continue;
+            if (v < vMin) vMin = v;
+            if (v > vMax) vMax = v;
+        }
+        if (vMin > vMax) return;
+
+        float rng = vMax - vMin;
+        if (rng < 0.02f) { vMin -= 0.5f; vMax += 0.5f; rng = vMax - vMin; }
+
+        // Plot alaninin %88'ini kullan, ust/alt %6 pay birak
+        float top = plotT + plotH * 0.06f;
+        float usable = plotH * 0.88f;
+
+        Path path = new Path();
+        boolean started = false;
+        float firstX = 0, firstY = 0;
+        for (int i = 0; i < vix.length && i < nPts; i++) {
+            float v = vix[i];
+            if (Float.isNaN(v)) continue;
+            float px = plotL + plotW * (i / (float) (nPts - 1));
+            float py = top + usable * (1f - (v - vMin) / rng);
+            if (!started) {
+                path.moveTo(px, py);
+                started = true;
+                firstX = px; firstY = py;
+            } else {
+                path.lineTo(px, py);   // kucuk bosluklar kopruleriyle gecilir
+            }
+        }
+        if (!started) return;
+
+        Paint vp = new Paint(Paint.ANTI_ALIAS_FLAG);
+        vp.setStyle(Paint.Style.STROKE);
+        vp.setColor(COL_VIX);
+        vp.setStrokeWidth(Math.max(1f, unit * 0.065f));
+        vp.setStrokeJoin(Paint.Join.ROUND);
+        vp.setStrokeCap(Paint.Cap.ROUND);
+        canvas.drawPath(path, vp);
+
+        // Kucuk "VIX" etiketi - cizginin baslangicinda
+        Paint lp = new Paint(Paint.ANTI_ALIAS_FLAG);
+        lp.setColor(COL_VIX_TEXT);
+        lp.setTextSize(unit * 0.50f);
+        lp.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        lp.setTextAlign(Paint.Align.LEFT);
+        lp.setShadowLayer(2, 1, 1, 0xC0000000);
+        canvas.drawText("VIX", firstX + unit * 0.18f, firstY - unit * 0.24f, lp);
+    }
+
+    /** Baseline biliniyorsa NAV'i $ olarak, bilinmiyorsa yuzde olarak yazar. */
+    private static String formatLevel(float pct, float prevCloseNav) {
+        if (!Float.isNaN(prevCloseNav) && prevCloseNav > 0) {
+            double nav = prevCloseNav * (1.0 + pct / 100.0);
+            return "$" + String.format(Locale.US, "%,.0f", nav);
+        }
+        return String.format(Locale.US, "%+.2f%%", pct);
+    }
+
+    private static float pctToY(float pct, float lo, float hi, float plotT, float plotH) {
+        float t = (pct - lo) / (hi - lo);
+        t = Math.max(0f, Math.min(1f, t));
+        return plotT + plotH * (1f - t);
+    }
+}

@@ -1,0 +1,58 @@
+{
+  "result": {
+    "returnCode": 200,
+    "reasonCode": 1,
+    "messageText": "Başarılı"
+  },
+  "transactions": [
+    {
+      "customerNum": 45245447,
+      "customerName": "TREK TURKEY LTD ",
+      "VKN": 1194136989,
+      "TCKN": null,
+      "productId": "9d5de526-e32c-5cc7-81ce-545b93ade759",
+      "unitNum": 135,
+      "accountNum": 6294536,
+      "currencyCode": "TL",
+      "IBAN": "TR450006200013500006294536",
+      "activityDate": "2026-06-30",
+      "valueDate": "2026-07-01",
+      "txnCreditDebitIndicator": "A",
+      "amount": 1500.50,
+      "balanceAfterTransaction": 25000.00,
+      "explanation": "Gelen EFT",
+      "transactionId": "ELMP",
+      "clasificationCode": "NTHE",
+      "transactionReferenceId": "2026-06-30T09:10:11.000001",
+      "transactionInstanceId": "2026-06-30T09:10:11.123456",
+      "enrichmentInformation": [
+        { "enrichmentCode": "HES", "enrichmentValue": { "moduleName": "HES", "accountMainType": "M", "accSubType": "S", "accType": "A" } },
+        { "enrichmentCode": "MUS", "enrichmentValue": { "moduleName": "MUS", "nameSurnameText": "TREK TURKEY LTD ", "corrNameSurnameText": "ACME LTD" } }
+      ]
+    },
+    {
+      "customerNum": 45245447,
+      "customerName": "TREK TURKEY LTD ",
+      "VKN": 1194136989,
+      "TCKN": null,
+      "productId": "aa112233-4455-6677-8899-aabbccddeeff",
+      "unitNum": 135,
+      "accountNum": 6294536,
+      "currencyCode": null,
+      "IBAN": "TR450006200013500006294536",
+      "activityDate": "2026-06-30",
+      "valueDate": "2026-06-30",
+      "txnCreditDebitIndicator": "B",
+      "amount": 300.00,
+      "balanceAfterTransaction": 24700.00,
+      "explanation": "Fatura odemesi",
+      "transactionId": "GCD1",
+      "clasificationCode": "NCOM",
+      "transactionReferenceId": "2026-06-30T05:24:41.000001",
+      "transactionInstanceId": "2026-06-30T05:24:41.850556",
+      "enrichmentInformation": [
+        { "enrichmentCode": "MUS", "enrichmentValue": { "moduleName": "MUS", "nameSurnameText": "TREK TURKEY LTD ", "corrNameSurnameText": "TEDARIKCI AS" } }
+      ]
+    }
+  ]
+}

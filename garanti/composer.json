@@ -1,0 +1,16 @@
+{
+    "name": "trek/garanti-hesap-takip",
+    "description": "Garanti BBVA hesap hareketleri takip uygulamasi",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": { "Garanti\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Garanti\\Tests\\": "tests/" }
+    }
+}
